@@ -1,0 +1,18 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+    "name": "eccologic-asm",
+    "version": "1.0.0",
+    "builtin-baseline": "d781bd9ca77ac3dc2f13d88169021d48459c665f",
+    "dependencies": [
+        { "name": "mimalloc", "features": [ "override" ] },
+        { "name": "capstone", "features": [ "arm", "arm64", "mips", "x86" ] },
+        "drogon",
+        "keystone"
+    ],
+    "overrides": [
+        { "name": "mimalloc", "version": "1.6.4" },
+        { "name": "drogon",   "version": "1.7.1" },
+        { "name": "keystone", "version": "0.9.2" },
+        { "name": "capstone", "version": "4.0.2", "port-version": 2 }
+    ]
+}
