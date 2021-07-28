@@ -6,7 +6,7 @@
 #include <iostream>
 #include <format>
 
-#include "dependencies/scope_guard.hpp"
+#include "scope_guard/scope_guard.hpp"
 #include "drogon/drogon.h"
 #include "keystone/keystone.h"
 #include "capstone/capstone.h"
