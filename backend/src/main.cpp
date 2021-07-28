@@ -160,6 +160,8 @@ HttpResponsePtr api_handle_encode( const HttpRequestPtr& req )
     }
 
     // Set up Keystone.
+    // TODO: Well... Maybe it would be a good idea to cache each mode & arch = ks_ptr into an unordered_map.
+    //       But it seems like keystone does a pretty good job of initializing all "heavy" code at once... I think?
     const auto arch{ found_arch->second };
     const auto mode{ found_mode->second };
 
@@ -168,14 +170,6 @@ HttpResponsePtr api_handle_encode( const HttpRequestPtr& req )
     {
         switch( err )
         {
-        case KS_ERR_MODE:
-        {
-            return respond_err(
-                "Invalid/unsupported mode. This is usually caused by you (the client) sending the wrong mode for the desired architecture (the request JSON \"arch\" key).",
-                "InvalidJsonValue",
-                k400BadRequest );
-        }
-
         default:
         {
             return respond_err( std::format( "ks_open failed: {}", ks_strerror( err ) ), "ServerError", k500InternalServerError );
@@ -250,6 +244,7 @@ HttpResponsePtr api_handle_encode( const HttpRequestPtr& req )
     result[ "result" ][ "bytes" ]        = json_bytes;
     result[ "result" ][ "bytes_detail" ] = json_bytes_detail;
 
+    // What if I told you that something called RAII exists? But I don't do that here because that requires me to write more code... huhuhuhu...
     ks_free( enc_code );
     ks_close( ks );
     cs_free( insn, 1 );
