@@ -44,7 +44,7 @@ const std::unordered_map< ks_arch, cs_arch > g_ks_to_cs_arch{
 // Maps a Keystone mode to a Capstone mode.
 const std::unordered_map< ks_mode, cs_mode > g_ks_to_cs_mode{
     // x86.
-    { KS_MODE_64, CS_MODE_64 }, // Also valid for PPC...
+    { KS_MODE_64, CS_MODE_64 }, // NOTE: This is also valid for PPC...
     { KS_MODE_32, CS_MODE_32 },
     { KS_MODE_16, CS_MODE_16 },
 
@@ -61,124 +61,150 @@ const std::unordered_map< ks_mode, cs_mode > g_ks_to_cs_mode{
     { KS_MODE_MICRO,    CS_MODE_MICRO    }
 };
 
-// Convert a string to a integral type.
-template< class _T >
-std::optional< _T > from_str( std::string_view str )
-{
-    _T res;
-    if( const auto[ p, ec ]{ std::from_chars( str.data(), str.data() + str.length(), res ) }; ec == std::errc{} )
-    {
-        return {};
-    }
-
-    return res;
-}
-
 // Handle posts to "/api/encode".
-Json::Value api_handle_encode( const HttpRequestPtr& req )
+HttpResponsePtr api_handle_encode( const HttpRequestPtr& req )
 {
-    Json::Value root;
+    const auto respond{
+        [ &req ]( const Json::Value &json, HttpStatusCode http_status = k200OK )
+        {
+            const auto resp{ HttpResponse::newHttpJsonResponse( json ) };
+            resp->setStatusCode( http_status );
+            return resp;
+        }
+    };
 
-    const auto json_error{
-        [ &root ]( std::string_view msg, HttpStatusCode status )
+    const auto respond_err{
+        [ &req, &respond ]( std::string_view msg, std::string_view status, HttpStatusCode http_status )
         {
             Json::Value error;
-            error[ "message" ] = msg.data();
-            error[ "status" ]  = status;
-            root[ "error" ] = error;
-            return root;
+            error[ "message" ] = std::string{ msg } + " See https://asm.eccologic.net/help for API help.";
+            error[ "status" ]  = status.data();
+            return respond( std::move( error ), http_status );
         }
     };
 
     const auto json{ req->jsonObject() };
     if( !json )
     {
-        return json_error( "Missing \"Content-Type\" header or invalid JSON object.", k400BadRequest );
+        return respond_err( "Missing \"Content-Type\" header or invalid JSON object.", "InvalidJson", k400BadRequest );
     }
 
-    // Check keys & key types.
+    // Check keys & key types in the request JSON.
     if( !json->isMember( "arch" ) )
     {
-        return json_error( "JSON object is missing the \"arch\" key.", k400BadRequest );
+        return respond_err( "JSON object is missing the \"arch\" key.", "InvalidJson", k400BadRequest );
     }
     else if( !json->isMember( "mode" ) )
     {
-        return json_error( "JSON object is missing the \"mode\" key.", k400BadRequest );
+        return respond_err( "JSON object is missing the \"mode\" key.", "InvalidJson", k400BadRequest );
+    }
+    else if( !json->isMember( "syntax" ) )
+    {
+        return respond_err( "JSON object is missing the \"syntax\" key.", "InvalidJson", k400BadRequest );
     }
     else if( !json->isMember( "code" ) )
     {
-        return json_error( "JSON object is missing the \"code\" key.", k400BadRequest );
+        return respond_err( "JSON object is missing the \"code\" key.", "InvalidJson", k400BadRequest );
     }
 
-    // Resolve architecture value from json.
+    // Resolve architecture value from the request JSON.
     const auto arch_key{ json->operator[]( "arch" ) };
     if( !arch_key.isUInt() )
     {
-        return json_error( "\"arch\" key must be an unsigned integral value.", k400BadRequest );
+        return respond_err( "\"arch\" key value must be an unsigned integral.", "InvalidJsonValue", k400BadRequest );
     }
 
     const auto found_arch{ g_keystone_archs.find( arch_key.asUInt() ) };
     if( found_arch == g_keystone_archs.end() )
     {
-        return json_error( "Invalid \"arch\" value.", k400BadRequest );
+        return respond_err( "Invalid \"arch\" value.", "InvalidJsonValue", k400BadRequest );
     }
 
-    // Resolve mode value from json.
+    // Resolve mode value from the request JSON.
     const auto mode_key{ json->operator[]( "mode" ) };
     if( !mode_key.isUInt() )
     {
-        return json_error( "\"mode\" key must be an unsigned integral value.", k400BadRequest );
+        return respond_err( "\"mode\" key value must be an unsigned integral.", "InvalidJsonValue", k400BadRequest );
     }
 
     const auto found_mode{ g_keystone_modes.find( mode_key.asUInt() ) };
     if( found_mode == g_keystone_modes.end() )
     {
-        return json_error( "Invalid \"mode\" value.", k400BadRequest );
+        return respond_err( "Invalid \"mode\" key value.", "InvalidJsonValue", k400BadRequest );
     }
 
-    // TODO: !!! Check if mode can be opened for arch !!!
+    // Resolve syntax option value from the request JSON.
+    const auto syntax_key{ json->operator[]( "syntax" ) };
+    if( !syntax_key.isUInt() )
+    {
+        return respond_err( "\"syntax\" key value must be an unsigned integral.", "InvalidJsonValue", k400BadRequest );
+    }
 
-    // Resolve code string to encode.
+    const auto syntax{ syntax_key.asUInt() };
+    if( syntax > 1 )
+    {
+        return respond_err( "Invalid \"syntax\" value.", "InvalidJsonValue", k400BadRequest );
+    }
+
+    // Resolve code string to encode from the request JSON.
     const auto code_key{ json->operator[]( "code" ) };
     if( !code_key.isString() )
     {
-        return json_error( "\"code\" key must be a string value.", k400BadRequest );
+        return respond_err( "\"code\" key value must be a string.", "InvalidJsonValue", k400BadRequest );
+    }
+
+    const auto code{ code_key.asString() };
+    if( code.empty() )
+    {
+        return respond_err( "\"code\" key string value must not be empty.", "InvalidJsonValue", k400BadRequest );
     }
 
     // Set up Keystone.
     const auto arch{ found_arch->second };
     const auto mode{ found_mode->second };
-    const auto code{ code_key.asString() };
 
-    // TODO: Cache all valid ks_open types.
-    //       Sanity check code string.
-    ks_engine *ks;
-    auto keystone_err{ ks_open( arch, mode, &ks ) };
-    if( keystone_err != KS_ERR_OK )
+    ks_engine* ks;
+    if( const auto err{ ks_open( arch, mode, &ks ) }; err != KS_ERR_OK )
     {
-        return json_error( "Internal Server Error.", k500InternalServerError );
+        switch( err )
+        {
+        case KS_ERR_MODE:
+        {
+            return respond_err(
+                "Invalid/unsupported mode. This is usually caused by you (the client) sending the wrong mode for the desired architecture (the request JSON \"arch\" key).",
+                "InvalidJsonValue",
+                k400BadRequest );
+        }
+
+        default:
+        {
+            return respond_err( std::format( "ks_open failed: {}", ks_strerror( err ) ), "ServerError", k500InternalServerError );
+        }
+        }
     }
 
-    // TODO: Syntax...
-    /*
-            // Runtime option value (associated with ks_opt_type above)
-        typedef enum ks_opt_value {
-        	KS_OPT_SYNTAX_INTEL =   1 << 0, // X86 Intel syntax - default on X86 (KS_OPT_SYNTAX).
-        	KS_OPT_SYNTAX_ATT   =   1 << 1, // X86 ATT asm syntax (KS_OPT_SYNTAX).
-        	KS_OPT_SYNTAX_NASM  =   1 << 2, // X86 Nasm syntax (KS_OPT_SYNTAX).
-        	KS_OPT_SYNTAX_MASM  =   1 << 3, // X86 Masm syntax (KS_OPT_SYNTAX) - unsupported yet.
-        	KS_OPT_SYNTAX_GAS   =   1 << 4, // X86 GNU GAS syntax (KS_OPT_SYNTAX).
-        	KS_OPT_SYNTAX_RADIX16 = 1 << 5, // All immediates are in hex format (i.e 12 is 0x12)
-        } ks_opt_value;
-    */
+    // Set ASM syntax (only supported for x86 architecture for now?).
+    if( arch == KS_ARCH_X86 )
+    {
+        if( ks_option( ks, KS_OPT_SYNTAX, ( !syntax ) ? KS_OPT_SYNTAX_INTEL : KS_OPT_SYNTAX_ATT ) != KS_ERR_OK )
+        {
+            return respond_err( "Internal Server Error.", "ServerError", k500InternalServerError );
+        }
+    }
 
     // Encode the code string.
-    uint8_t *enc;
-    size_t  enc_size;
-    size_t  enc_stat;
-    if( ks_asm( ks, code.c_str(), 0, &enc, &enc_size, &enc_stat ) != KS_ERR_OK )
+    uint8_t* enc_code;
+    size_t   enc_size;
+    size_t   enc_statements;
+    if( ks_asm( ks, code.c_str(), 0, &enc_code, &enc_size, &enc_statements ) != KS_ERR_OK )
     {
-        return json_error( std::format( "Invalid code: {}", ks_strerror( ks_errno( ks ) ) ), k500InternalServerError );
+        switch( ks_errno( ks ) )
+        {
+        default:
+        {
+            return respond_err( std::format( "Invalid code: {}.", ks_strerror( ks_errno( ks ) ) ), "InvalidAsmCode", k500InternalServerError );
+        }
+        }
     }
 
     // Set up Capstone.
@@ -186,44 +212,50 @@ Json::Value api_handle_encode( const HttpRequestPtr& req )
     auto capstone_err{ cs_open( g_ks_to_cs_arch.find( arch )->second, g_ks_to_cs_mode.find( mode )->second, &cs ) };
     if( capstone_err != CS_ERR_OK )
     {
-        ks_free( enc );
+        ks_free( enc_code );
         ks_close( ks );
-        return json_error( std::format( "Internal Server Error {}.", (int32_t)capstone_err ), k500InternalServerError );
+        return respond_err( "Internal Server Error.", "ServerError", k500InternalServerError );
     }
 
-    // Now decode again so we can give back each instruction line.
-    cs_insn *insn;
-    const auto dec_count{ cs_disasm( cs, enc, enc_size, 0, 0, &insn ) };
-    if( dec_count < 1 )
+    // Now decode again so we can give back info about each instruction.
+    auto        dec_code{ (const uint8_t *)enc_code };
+    size_t      dec_size{ enc_size };
+    uint64_t    addr{ 0 };
+    cs_insn*    insn{ cs_malloc( cs ) };
+    Json::Value json_bytes, json_bytes_detail;
+    while( cs_disasm_iter( cs, &dec_code, &dec_size, &addr, insn ) )
     {
-        ks_free( enc );
-        ks_close( ks );
-        cs_close( &cs );
-        return json_error( "Internal Server Error. 2", k500InternalServerError );
+        Json::Value info, bytes;
+
+        const auto size{ insn->size };
+        for( size_t i{}; i < size; ++i )
+        {
+            const auto byte{ insn->bytes[ i ] };
+            bytes.append( byte );
+            json_bytes.append( byte );
+        }
+
+        info[ "bytes" ]    = bytes;
+        info[ "address"  ] = insn->address;
+        info[ "size"     ] = size;
+        info[ "mnemonic" ] = insn->mnemonic;
+        info[ "operands" ] = insn->op_str;
+
+        json_bytes_detail.append( std::move( info ) );
     }
 
-    Json::Value json_decoded_instructions;
-    for( size_t i{}; i < dec_count; ++i )
-    {
-        // json_decoded_instructions[ ]
-    }
+    // Set up the final JSON result.
+    Json::Value result;
+    result[ "result" ][ "byte_count" ]   = enc_size;
+    result[ "result" ][ "bytes" ]        = json_bytes;
+    result[ "result" ][ "bytes_detail" ] = json_bytes_detail;
 
-    // Set up the JSON result.
-    Json::Value json_encoded_bytes;
-    for( size_t i{}; i < enc_size; ++i )
-    {
-        json_encoded_bytes.append( enc[ i ] );
-    }
-
-    root[ "result" ][ "byte_count" ] = enc_size;
-    root[ "result" ][ "bytes" ]      = json_encoded_bytes;
-
-    ks_free( enc );
+    ks_free( enc_code );
     ks_close( ks );
-    cs_free( insn, dec_count );
+    cs_free( insn, 1 );
     cs_close( &cs );
 
-    return root;
+    return respond( result );
 }
 
 int32_t __cdecl main( int32_t argc, char **argv, char **envp )
@@ -231,31 +263,7 @@ int32_t __cdecl main( int32_t argc, char **argv, char **envp )
     ROUTE( "/api/encode", { Post },
         []( const HttpRequestPtr& req, std::function< void ( const HttpResponsePtr& )>&& callback )
         {
-            //const Json::Value json;
-            //json[ "result" ] = "error"
-            //
-            //const auto enc_type{ req.getParameter( "type" ) };
-            //const auto enc_data{ req.getParameter( "data" ) };
-            //
-            ////resp->setStatusCode( k200OK );
-            ////resp->setContentTypeCode( CT_APPLICATION_JSON );
-            ////// resp->setBody( "Hello, World!" );
-            //
-            //callback( resp );
-
-            //Json::Value json_params{ Json::objectValue };
-            //auto params{ req->getParameters() };
-            //for( const auto& [key, value] : params ) {
-            //    Json::Value param;
-            //    param[ "key" ] = key;
-            //    param[ "value" ] = value;
-            //    json_params.append( param );
-            //}
-            //
-            //auto resp{ HttpResponse::newHttpJsonResponse( json_params ) };
-            //callback( resp );
-
-            callback( HttpResponse::newHttpJsonResponse( api_handle_encode( req ) ) );
+            callback( api_handle_encode( req ) );
         }
     );
 
@@ -269,20 +277,6 @@ int32_t __cdecl main( int32_t argc, char **argv, char **envp )
             callback( resp );
         }
     );
-
-    //app().registerHandler(
-    //    "/hello_user",
-    //    [](const HttpRequestPtr &req,
-    //       std::function<void(const HttpResponsePtr &)> &&callback) {
-    //        auto resp = HttpResponse::newHttpResponse();
-    //        std::string name = req->getParameter("user");
-    //        if (name == "")
-    //            resp->setBody("Please tell me your name");
-    //        else
-    //            resp->setBody("Hello, " + name + "!");
-    //        callback(resp);
-    //    },
-    //    {Get});
 
     LOG_INFO << "Drogon server running...";
     app().loadConfigFile( "drogon-config.json" ).run();
