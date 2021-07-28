@@ -26,10 +26,6 @@ add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
 
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /Zc:__cplusplus /std:c++latest)
-endif()
-
 target_include_directories(${PROJECT_NAME} PRIVATE "src/")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -43,6 +39,9 @@ if(MSVC)
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
         RUNTIME_OUTPUT_DIRECTORY_RELEASE ${BIN_OUTPUT_PATH})
+
+    target_compile_options(${PROJECT_NAME} PRIVATE /Zc:__cplusplus /std:c++latest /Zi)
+    target_link_options(${PROJECT_NAME} PRIVATE /INCREMENTAL:NO /OPT:REF /OPT:ICF=4 /DEBUG:FULL)
 else()
     #set_target_properties(${PROJECT_NAME} PROPERTIES
     #    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"

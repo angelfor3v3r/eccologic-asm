@@ -5,7 +5,7 @@
     "builtin-baseline": "d781bd9ca77ac3dc2f13d88169021d48459c665f",
     "dependencies": [
         { "name": "mimalloc", "features": [ "override" ] },
-        { "name": "capstone", "features": [ "arm", "arm64", "mips", "x86" ] },
+        { "name": "capstone", "features": [ "arm", "arm64", "mips", "ppc", "x86" ] },
         "drogon",
         "keystone"
     ],
