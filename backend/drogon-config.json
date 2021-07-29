@@ -6,6 +6,7 @@
           "https": false
         }
     ],
+    "document_root": "./site",
     "threads_num": 0,
     "log": {
         "log_path": "./",

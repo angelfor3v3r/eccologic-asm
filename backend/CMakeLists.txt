@@ -11,7 +11,10 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     endif()
 endif()
 
-project(asm)
+project(asm
+    VERSION 1.0.0
+    HOMEPAGE_URL "https://asm.eccologic.net/"
+    LANGUAGES CXX)
 
 find_package(mimalloc 1.6.4 CONFIG REQUIRED)
 find_package(drogon CONFIG REQUIRED)
@@ -20,6 +23,7 @@ find_library(CAPSTONE_LIB capstone REQUIRED)
 
 # Source files relative to "./src".
 set(SRC_FILES
+    api_encode.cpp
     main.cpp)
 list(TRANSFORM SRC_FILES PREPEND "src/")
 add_executable(${PROJECT_NAME} ${SRC_FILES})
@@ -36,6 +40,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 set(BIN_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 if(MSVC)
+    # TODO: Test for MSVC_VERSION >= 1927
+
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
         RUNTIME_OUTPUT_DIRECTORY_RELEASE ${BIN_OUTPUT_PATH})
