@@ -38,7 +38,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${KEYSTONE_LIB}
     ${CAPSTONE_LIB})
 
-set(BIN_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
+set(BIN_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/../bin")
 if(MSVC)
     # TODO: Test for MSVC_VERSION >= 1927
 
@@ -55,8 +55,10 @@ else()
     #    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 endif()
 
-# Copy the default config file for drogon
+# Copy the default config file for drogon (On windows we can't run as daemon).
 if(WIN32)
-    file(COPY drogon-config.json DESTINATION ${BIN_OUTPUT_PATH})
+    set(DROGON_CFG_RUN_AS_DAEMON false)
 else()
+    set(DROGON_CFG_RUN_AS_DAEMON true)
 endif()
+configure_file(drogon-config.json.default "${BIN_OUTPUT_PATH}/drogon-config.json" @ONLY)

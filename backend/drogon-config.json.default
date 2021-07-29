@@ -1,0 +1,19 @@
+{
+    "listeners": [
+        {
+          "address": "0.0.0.0",
+          "port": 80,
+          "https": false
+        }
+    ],
+    "document_root": "./site",
+    "threads_num": 0,
+    "log": {
+        "log_path": "./",
+        "logfile_base_name": "drogon.log",
+        "log_size_limit": 100000000,
+        "log_level": "DEBUG"
+    },
+    "run_as_daemon": @DROGON_CFG_RUN_AS_DAEMON@,
+    "use_brotli": true
+}
