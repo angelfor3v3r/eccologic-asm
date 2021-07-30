@@ -6,14 +6,17 @@
           "https": false
         }
     ],
-    "document_root": "./site",
-    "threads_num": 0,
+    "app": {
+        "run_as_daemon": @DROGON_CFG_RUN_AS_DAEMON@,
+        "threads_num": 0,
+        "document_root": "./site",
+        "br_static": true,
+        "gzip_static": true
+    },
     "log": {
         "log_path": "./",
         "logfile_base_name": "drogon.log",
         "log_size_limit": 100000000,
         "log_level": "DEBUG"
-    },
-    "run_as_daemon": @DROGON_CFG_RUN_AS_DAEMON@,
-    "use_brotli": true
+    }
 }

@@ -55,7 +55,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     const auto json{ req->jsonObject() };
     if( !json )
     {
-        return respond_err( "Invalid JSON object or missing \"Content-Type\" header", "InvalidJson", k400BadRequest );
+        return respond_err( "Invalid JSON object or missing \"Content-Type\" request header.", "InvalidJson", k400BadRequest );
     }
 
     // Check keys & key types in the request JSON.

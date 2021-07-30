@@ -22,20 +22,10 @@ int32_t __cdecl main( int32_t argc, char **argv, char **envp )
             // callback( api::decode( req ) );
         } );
 
-    ROUTE( "/", { Get },
-        [ & ]() noexcept ATTR_FORCEINLINE
-        {
-            const auto resp{ HttpResponse::newHttpResponse() };
-            resp->setStatusCode( k200OK );
-            resp->setContentTypeCode( CT_TEXT_HTML );
-            resp->setBody( "Hello, World!" );
-            callback( resp );
-        } );
-
     #undef ROUTE
 
     LOG_INFO << "Drogon server running...";
-    app().loadConfigFile( "drogon-config.json" ).run();
+    app().loadConfigFile( "./drogon-config.json" ).run();
 
     return 1;
 }
