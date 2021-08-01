@@ -6,26 +6,16 @@ import NotFound from "./not-found"
 import Home     from "./home";
 import Help     from "./help";
 
-class App extends Component
+export default function App()
 {
-    //on_route_change = e => {
-    //
-    //};
-    // <Router onChange={this.on_route_change}>
-
-    render()
-    {
-        return(
-            <BrowserRouter>
-                <Header/>
-                <Switch>
-                    <Route path="/" component={Home} exact/>
-                    <Route path="/help" component={Help}/>
-                    <Route component={NotFound}/>
-                </Switch>
-            </BrowserRouter>
-        );
-    }
+    return(
+        <BrowserRouter>
+            <Header/>
+            <Switch>
+                <Route path="/" component={Home} exact/>
+                <Route path="/help" component={Help}/>
+                <Route component={NotFound}/>
+            </Switch>
+        </BrowserRouter>
+    );
 }
-
-export default App;

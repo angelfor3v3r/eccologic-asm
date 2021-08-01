@@ -25,7 +25,7 @@ int32_t __cdecl main( int32_t argc, char **argv, char **envp ) noexcept
         { Post } );
 
     // Since the primary frontend is a Single-page application (SPA) with client-side routing then I must serve the client-side frontend always.
-    fw->setCustom404Page( HttpResponse::newFileResponse( std::format( "{}/{}", app().getDocumentRoot(), app().getHomePage() ) ), false );
+    fw->setCustom404Page( HttpResponse::newFileResponse( std::format( "{}/{}", fw->getDocumentRoot(), fw->getHomePage() ) ), false );
 
     // Run the web server.
     LOG_INFO << "Drogon server running...";
