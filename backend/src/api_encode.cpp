@@ -224,7 +224,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     res[ "result" ][ "bytes" ]        = all_bytes;
     res[ "result" ][ "bytes_detail" ] = bytes_detail;
 
-    return respond( res );
+    return respond( std::move( res ) );
 }
 
 } // namespace api

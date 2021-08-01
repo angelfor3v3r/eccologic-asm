@@ -1,6 +1,6 @@
 #pragma once
 
-// Shared across both "encode" and "decode" APIs.
+// Definitions below are shared across both the "encode" and "decode" APIs.
 
 // Arguments for "cs_open".
 struct CapstoneOpenArgs
@@ -19,4 +19,5 @@ const std::unordered_map< std::string_view, CapstoneOpenArgs > g_cs_args{
     { "aarch64", { CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN } } // ARM-64 (aka. AArch64); NOTE: Keystone doesn't support big endian ARM64 but Capstone does.
 };
 
+// API route handlers.
 #include "api_encode.hpp"

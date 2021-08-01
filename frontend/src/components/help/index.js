@@ -1,9 +1,10 @@
 import { h } from "preact";
 
-const Home = () => (
-    <main>
-        <h1>Help page</h1>
-    </main>
-);
-
-export default Home;
+export default function Help()
+{
+    return(
+        <main>
+            <h1>Help page</h1>
+        </main>
+    );
+}

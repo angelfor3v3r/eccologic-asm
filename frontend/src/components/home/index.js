@@ -1,6 +1,6 @@
 import { h, Component } from "preact";
 
-class Home extends Component
+export default class Home extends Component
 {
     constructor()
     {
@@ -29,7 +29,7 @@ class Home extends Component
     on_change = e =>
     {
         // this.setState( { asm_text: e.target.value } );
-    }
+    };
 
     on_submit = e =>
     {
@@ -43,13 +43,12 @@ class Home extends Component
         //});
 
         e.preventDefault();
-    };
+    }
 
     render( _, { asm_text } )
     {
         return(
             <main>
-                <h1>Home page</h1>
                 <div class="container">
                     <form onSubmit={this.on_submit}>
                         <div class="mb-3">
@@ -83,8 +82,7 @@ class Home extends Component
                         </div>
                     </form>
                 </div>
-            </main>);
+            </main>
+        );
     }
 }
-
-export default Home;

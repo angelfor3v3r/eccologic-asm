@@ -1,10 +1,10 @@
-import { h, Component, Fragment } from "preact";
-import { Router }                 from "preact-router";
-import { createBrowserHistory }      from "history";
+import { h, Component }                 from "preact";
+import { BrowserRouter, Switch, Route } from "react-router-dom";
 
-import Header from "./header";
-import Home   from "./home";
-import Help   from "./help";
+import Header   from "./header";
+import NotFound from "./not-found"
+import Home     from "./home";
+import Help     from "./help";
 
 class App extends Component
 {
@@ -16,14 +16,15 @@ class App extends Component
     render()
     {
         return(
-            <>
+            <BrowserRouter>
                 <Header/>
-                <Router history={createBrowserHistory()}>
-                    <Home path="/"/>
-                    <Help path="/help"/>
-                    <Home default/>
-                </Router>
-            </>);
+                <Switch>
+                    <Route path="/" component={Home} exact/>
+                    <Route path="/help" component={Help}/>
+                    <Route component={NotFound}/>
+                </Switch>
+            </BrowserRouter>
+        );
     }
 }
 

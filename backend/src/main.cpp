@@ -5,9 +5,8 @@ using namespace drogon;
 
 int32_t __cdecl main( int32_t argc, char **argv, char **envp ) noexcept
 {
-    const auto fw{ &app() };
-
     // Load the Drogon config first.
+    const auto fw{ &app() };
     fw->loadConfigFile( "./drogon-config.json" );
 
     // Set up API routes.
@@ -21,12 +20,11 @@ int32_t __cdecl main( int32_t argc, char **argv, char **envp ) noexcept
     fw->registerHandler( "/api/decode",
         []( const HttpRequestPtr& req, std::function< void ( const HttpResponsePtr& )>&& callback )
         {
-            callback( api::encode( req ) );
+            // callback( api::decode( req ) );
         },
         { Post } );
 
-    // Since the primary frontend is a Single-page application (SPA) then I must serve the client-side frontend always.
-    // The actual 404 is handled elsewhere.
+    // Since the primary frontend is a Single-page application (SPA) with client-side routing then I must serve the client-side frontend always.
     fw->setCustom404Page( HttpResponse::newFileResponse( std::format( "{}/{}", app().getDocumentRoot(), app().getHomePage() ) ), false );
 
     // Run the web server.
