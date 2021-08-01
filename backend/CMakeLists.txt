@@ -46,8 +46,8 @@ if(MSVC)
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
         RUNTIME_OUTPUT_DIRECTORY_RELEASE ${BIN_OUTPUT_PATH})
 
-    target_compile_options(${PROJECT_NAME} PRIVATE /Zc:__cplusplus /std:c++latest /Zi)
-    target_link_options(${PROJECT_NAME} PRIVATE /INCREMENTAL:NO /OPT:REF /OPT:ICF=4 /DEBUG:FULL)
+    target_compile_options(${PROJECT_NAME} PRIVATE /Zc:__cplusplus /std:c++latest)
+    target_link_options(${PROJECT_NAME} PRIVATE /INCREMENTAL:NO /OPT:REF /OPT:ICF=2 /DEBUG:NONE)
 else()
     #set_target_properties(${PROJECT_NAME} PROPERTIES
     #    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"

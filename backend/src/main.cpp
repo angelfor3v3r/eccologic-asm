@@ -3,29 +3,35 @@
 
 using namespace drogon;
 
-int32_t __cdecl main( int32_t argc, char **argv, char **envp )
+int32_t __cdecl main( int32_t argc, char **argv, char **envp ) noexcept
 {
-    // Defines a route with "const HttpRequestPtr& req" and "std::function< void ( const HttpResponsePtr& )>&& callback" already defined.
-    // NOTE: You must use a global by-reference capture for this to work.
-    #define ROUTE( name, method_and_filters, func ) \
-        app().registerHandler( name, []( const HttpRequestPtr& req, std::function< void ( const HttpResponsePtr& )>&& callback ){ func(); }, method_and_filters )
+    const auto fw{ &app() };
 
-    ROUTE( "/api/encode", { Post },
-        [ & ]() noexcept ATTR_FORCEINLINE
+    // Load the Drogon config first.
+    fw->loadConfigFile( "./drogon-config.json" );
+
+    // Set up API routes.
+    fw->registerHandler( "/api/encode",
+        []( const HttpRequestPtr& req, std::function< void ( const HttpResponsePtr& )>&& callback )
         {
             callback( api::encode( req ) );
-        } );
+        },
+        { Post } );
 
-    ROUTE( "/api/decode", { Post },
-        [ & ]() noexcept ATTR_FORCEINLINE
+    fw->registerHandler( "/api/decode",
+        []( const HttpRequestPtr& req, std::function< void ( const HttpResponsePtr& )>&& callback )
         {
-            // callback( api::decode( req ) );
-        } );
+            callback( api::encode( req ) );
+        },
+        { Post } );
 
-    #undef ROUTE
+    // Since the primary frontend is a Single-page application (SPA) then I must serve the client-side frontend always.
+    // The actual 404 is handled elsewhere.
+    fw->setCustom404Page( HttpResponse::newFileResponse( std::format( "{}/{}", app().getDocumentRoot(), app().getHomePage() ) ), false );
 
+    // Run the web server.
     LOG_INFO << "Drogon server running...";
-    app().loadConfigFile( "./drogon-config.json" ).run();
+    fw->run();
 
     return 1;
 }

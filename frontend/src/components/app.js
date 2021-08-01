@@ -1,5 +1,6 @@
 import { h, Component, Fragment } from "preact";
 import { Router }                 from "preact-router";
+import { createBrowserHistory }      from "history";
 
 import Header from "./header";
 import Home   from "./home";
@@ -17,7 +18,7 @@ class App extends Component
         return(
             <>
                 <Header/>
-                <Router>
+                <Router history={createBrowserHistory()}>
                     <Home path="/"/>
                     <Help path="/help"/>
                     <Home default/>

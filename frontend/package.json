@@ -10,7 +10,8 @@
     "dependencies": {
         "preact": "^10.5.14",
         "preact-render-to-string": "^5.1.19",
-        "preact-router": "^3.2.1"
+        "preact-router": "^3.2.1",
+        "history": "^5.0.0"
     },
     "devDependencies": {
         "@babel/core": "^7.14.8",

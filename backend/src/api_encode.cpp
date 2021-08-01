@@ -20,7 +20,7 @@ const std::unordered_map< std::string_view, KeystoneOpenArgs > g_ks_args{
     { "x86-16", { KS_ARCH_X86, KS_MODE_16 } }, // x86 (16-bit).
 
     // ARM.
-    { "arm64", { KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN } } // ARM-64 (aka. AArch64).
+    { "aarch64", { KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN } } // AArch64 (AKA. ARM64),
 };
 
 // Supported syntax options (x86 only).
