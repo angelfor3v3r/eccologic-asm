@@ -1,6 +1,6 @@
 import codemirror from "codemirror";
 import CodeMirror from "codemirror";
-import { h, Component, createRef } from "preact";
+import { h, Fragment, Component, createRef } from "preact";
 
 export default class Home extends Component
 {
@@ -19,7 +19,7 @@ export default class Home extends Component
             asm_arch:       "x86-64",
             asm_x86_synatx: "intel",
             asm_code:       "",
-            result_value:   "foobar"
+            result:         ""
         };
     }
 
@@ -68,12 +68,12 @@ export default class Home extends Component
             code: this.state.asm_code
         };
 
-        this.setState( { result_value: "Please wait..." } );
+        this.setState( { result: { type: "msg", value: "Please wait..." } } );
 
         this.encdec_post( this.enc_url, data )
         .then( ( { status, json } ) => {
             // Okay, was there an error status code?
-            let error = ( status >= 400 && status <= 500 ) ? true : false;
+            const error = ( status >= 400 && status <= 500 ) ? true : false;
             if( error )
             {
                 // Check if the JSON object was filled out.
@@ -84,35 +84,35 @@ export default class Home extends Component
                     {
                         case "InvalidCodeValue":
                         {
-                            this.setState( { result_value: "Error: The assembly text must not be empty." } );
+                            this.setState( { result: { type: "err", value: "The assembly text must not be empty." } } );
                             return;
                         }
 
                         case "InvalidAsmCode":
                         {
-                            this.setState( { result_value: `Error: Something is wrong with the input assembly.\n    - ${json.error.message}` } );
+                            this.setState( { result: { type: "err", value: `Something is wrong with the input assembly:\n${json.error.message}` } } );
                             return;
                         }
 
                         default:
                         {
                             // Show the non-user-friendly error.
-                            this.setState( { result_value: `Error (${json.error.status}):\n    ${json.error.message}` } );
+                            this.setState( { result: { type: "err", value: `Error (${json.error.status}):\n${json.error.message}` } } );
                             return;
                         }
                     }
                 }
 
-                this.setState( { result_value: "Error: Something bad happened (1)..." } );
+                this.setState( { result: { type: "err", value: "Something bad happened (1)." } } );
                 return;
             }
 
             // All good :)
-            this.setState( { result_value: JSON.stringify( json ) } );
+            this.setState( { result: { type: "enc", value: json.result } } );
         } )
         .catch( ( err ) => {
             console.log( err );
-            this.setState( { result_value: "Error: Something bad happened (2)..." } );
+            this.setState( { result: { type: "err", value: "Something bad happened (2)." } } );
         } );
     }
 
@@ -157,8 +157,51 @@ export default class Home extends Component
         evt.preventDefault();
     }
 
-    render( _, { result_value } )
+    render( _, { result } )
     {
+        const render_result = () =>
+        {
+            switch( result.type )
+            {
+                case "msg":
+                {
+                    return(
+                        <span>
+                            {result.value}
+                        </span>
+                    );
+                }
+
+                case "err":
+                {
+                    return(
+                        <>
+                            <h5 class="text-danger">Error</h5>
+                            <span>
+                                {result.value}
+                            </span>
+                        </>
+                    );
+                }
+
+                case "enc":
+                {
+                    return(
+                        <span>
+                            {JSON.stringify(result.value)}
+                        </span>
+                    );
+                }
+
+                default:
+                {
+                    return(
+                        <>...</>
+                    );
+                }
+            }
+        };
+
         return(
             <main>
                 <div class="container">
@@ -183,7 +226,7 @@ export default class Home extends Component
                                         <option value="x86-64" selected>x86 (64-bit)</option>
                                         <option value="x86-32">x86 (32-bit)</option>
                                         <option value="x86-16">x86 (16-bit)</option>
-                                        <option value="aarch64">AArch64</option>
+                                        <option value="aarch64">AArch64 (ARM64)</option>
                                     </select>
                                     <label for="asm_arch">Architecture</label>
                                 </div>
@@ -195,9 +238,23 @@ export default class Home extends Component
                     </form>
                 </div>
                 <div class="container">
-                <hr/>
-                    <label for="result_text" class="form-label">Result</label>
-                    <textarea class="form-control" type="text" id="result_text" rows="6" value={result_value} readonly></textarea>
+                    <hr/>
+                    <div class="card mb-3" id="result">
+                        <span class="card-header">Result</span>
+                        <div class="card-body" style="white-space: pre">
+                            {render_result()}
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" id="copy_result_as" data-bs-toggle="dropdown">
+                            Copy as...
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">C++11</a></li>
+                            <li><a class="dropdown-item" href="#">C</a></li>
+                            <li><a class="dropdown-item" href="#">Python</a></li>
+                        </ul>
+                    </div>
                 </div>
             </main>
         );

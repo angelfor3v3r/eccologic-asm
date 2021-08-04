@@ -230,9 +230,9 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
             all_bytes.append( byte ); // Add byte to full instruction JSON byte array.
         }
 
-        info[ "bytes" ]    = bytes;
         info[ "address"  ] = insn->address;
         info[ "size"     ] = size;
+        info[ "bytes"    ] = bytes;
         info[ "mnemonic" ] = insn->mnemonic;
         info[ "operands" ] = insn->op_str;
 
