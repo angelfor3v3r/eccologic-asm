@@ -20,14 +20,14 @@ const std::unordered_map< std::string_view, KeystoneOpenArgs > g_ks_args{
     { "x86-16", { KS_ARCH_X86, KS_MODE_16 } }, // x86 (16-bit).
 
     // ARM.
-    { "aarch64", { KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN } } // AArch64 (AKA. ARM64),
+    { "aarch64", { KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN } } // AArch64 (AKA. ARM64).
 };
 
 // Supported syntax options (x86 only).
-const std::unordered_map< int32_t, ks_opt_value > g_ks_syntax{
-    { 0, KS_OPT_SYNTAX_INTEL }, // x86 Intel syntax.
-    { 1, KS_OPT_SYNTAX_NASM  }, // x86 Nasm syntax.
-    { 2, KS_OPT_SYNTAX_ATT   }  // x86 ATT asm syntax.
+const std::unordered_map< std::string_view, ks_opt_value > g_ks_syntax{
+    { "intel", KS_OPT_SYNTAX_INTEL }, // x86 Intel syntax.
+    { "nasm",  KS_OPT_SYNTAX_NASM  }, // x86 Nasm syntax.
+    { "att",   KS_OPT_SYNTAX_ATT   }  // x86 ATT asm syntax.
 };
 
 // Handle posts to "/api/encode".
@@ -43,12 +43,14 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     };
 
     const auto respond_err{
-        [ &respond ]( std::string_view msg, std::string_view status, HttpStatusCode http_status ) noexcept ATTR_FORCEINLINE
+        [ &respond ]( std::string_view msg, std::string_view status, HttpStatusCode http_status, bool append_help = true ) noexcept ATTR_FORCEINLINE
         {
-            Json::Value error;
-            error[ "message" ] = std::string{ msg } + " See https://asm.eccologic.net/help for API help.";
-            error[ "status" ]  = status.data();
-            return respond( std::move( error ), http_status );
+            std::string help{ ( append_help ) ? " See https://asm.eccologic.net/help for API help." : "" };
+
+            Json::Value res;
+            res[ "error" ][ "message" ] = std::string{ msg } + help;
+            res[ "error" ][ "status" ]  = status.data();
+            return respond( std::move( res ), http_status );
         }
     };
 
@@ -61,24 +63,24 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     // Check keys & key types in the request JSON.
     if( !json->isMember( "arch" ) )
     {
-        return respond_err( "JSON object is missing the \"arch\" key.", "InvalidJson", k400BadRequest );
+        return respond_err( "JSON object is missing the \"arch\" key.", "MissingArchKey", k400BadRequest );
     }
     else if( !json->isMember( "code" ) )
     {
-        return respond_err( "JSON object is missing the \"code\" key.", "InvalidJson", k400BadRequest );
+        return respond_err( "JSON object is missing the \"code\" key.", "MissingCodeKey", k400BadRequest );
     }
 
     // Resolve architecture value from the request JSON.
     const auto arch_key{ json->operator[]( "arch" ) };
     if( !arch_key.isString() )
     {
-        return respond_err( "\"arch\" key value must be a string.", "InvalidJsonValue", k400BadRequest );
+        return respond_err( "\"arch\" key value must be a string.", "InvalidArchType", k400BadRequest );
     }
 
     const auto found_ks_args{ g_ks_args.find( arch_key.asString() ) };
     if( found_ks_args == g_ks_args.end() )
     {
-        return respond_err( "Invalid \"arch\" value.", "InvalidJsonValue", k400BadRequest );
+        return respond_err( "Invalid \"arch\" value.", "InvalidArchValue", k400BadRequest );
     }
 
     // Is there a syntax key?
@@ -92,15 +94,15 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
         {
             // Resolve syntax option value from the request JSON.
             const auto syntax_key{ json->operator[]( "syntax" ) };
-            if( !syntax_key.isUInt() )
+            if( !syntax_key.isString() )
             {
-                return respond_err( "\"syntax\" key value must be an unsigned integral.", "InvalidJsonValue", k400BadRequest );
+                return respond_err( "\"syntax\" key value must be a string.", "InvalidSyntaxType", k400BadRequest );
             }
 
-            const auto found_syntax{ g_ks_syntax.find( syntax_key.asUInt() ) };
+            const auto found_syntax{ g_ks_syntax.find( syntax_key.asString() ) };
             if( found_syntax == g_ks_syntax.end() )
             {
-                return respond_err( "Invalid \"syntax\" key value.", "InvalidJsonValue", k400BadRequest );
+                return respond_err( "Invalid \"syntax\" key value.", "InvalidSyntaxValue", k400BadRequest );
             }
 
             // Only fill the syntax value in if it's not the Intel syntax.
@@ -111,7 +113,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
         }
         else
         {
-            return respond_err( "The \"syntax\" key is only valid for the x86 architecture.", "InvalidJsonValue", k400BadRequest );
+            return respond_err( "The \"syntax\" key is only valid for the x86 architecture.", "InvalidSytnaxKey", k400BadRequest );
         }
     }
 
@@ -119,13 +121,13 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     const auto code_key{ json->operator[]( "code" ) };
     if( !code_key.isString() )
     {
-        return respond_err( "\"code\" key value must be a string.", "InvalidJsonValue", k400BadRequest );
+        return respond_err( "\"code\" key value must be a string.", "InvalidCodeType", k400BadRequest );
     }
 
     const auto code{ code_key.asString() };
     if( code.empty() )
     {
-        return respond_err( "\"code\" key string value must not be empty.", "InvalidJsonValue", k400BadRequest );
+        return respond_err( "\"code\" key string value must not be empty.", "InvalidCodeValue", k400BadRequest );
     }
 
     // The lambda here gets ran on return (RAII). Variables here MUST be cleaned up on exit if they're set.
@@ -165,7 +167,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     const auto mode{ found_ks_args->second.m_mode };
     if( const auto err{ ks_open( arch, mode, &ks ) }; err != KS_ERR_OK )
     {
-        return respond_err( std::format( "Assembling failed: {}", ks_strerror( err ) ), "ServerError", k500InternalServerError );
+        return respond_err( "Internal Server Error (1).", "ServerError", k500InternalServerError );
     }
 
     // Set ASM syntax (only supported for the x86 architecture).
@@ -173,7 +175,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     {
         if( ks_option( ks, KS_OPT_SYNTAX, *syntax ) != KS_ERR_OK )
         {
-            return respond_err( "Internal Server Error.", "ServerError", k500InternalServerError );
+            return respond_err( "Internal Server Error (2).", "ServerError", k500InternalServerError );
         }
     }
 
@@ -181,14 +183,33 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     size_t enc_size, enc_statements;
     if( ks_asm( ks, code.c_str(), 0, &enc_code, &enc_size, &enc_statements ) != KS_ERR_OK )
     {
-        return respond_err( std::format( "Disassembling failed: {}.", ks_strerror( ks_errno( ks ) ) ), "InvalidAsmCode", k500InternalServerError );
+        // Clean-up the keystone error.
+        std::string err{ ks_strerror( ks_errno( ks ) ) };
+        if( const auto first_delim{ err.find( '(' ) }; first_delim != std::string::npos )
+        {
+            if( const auto second_delim{ err.find( ')', first_delim + 1 ) }; second_delim != std::string::npos )
+            {
+                err.erase( first_delim - 1, ( second_delim - first_delim ) + 2 );
+                err += '.';
+            }
+            else
+            {
+                err = "";
+            }
+        }
+        else
+        {
+            err = "";
+        }
+
+        return respond_err( err, "InvalidAsmCode", k400BadRequest, false );
     }
 
     // Set up Capstone (We only allocate room for decoding one instruction, since that's all "cs_disasm_iter" needs).
     const auto cs_args{ g_cs_args.find( found_ks_args->first ) };
     if( const auto err{ cs_open( cs_args->second.m_arch, cs_args->second.m_mode, &cs ) }; err != CS_ERR_OK )
     {
-        return respond_err( "Internal Server Error.", "ServerError", k500InternalServerError );
+        return respond_err( "Internal Server Error (3).", "ServerError", k500InternalServerError );
     }
 
     insn = cs_malloc( cs );

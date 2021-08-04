@@ -1,8 +1,9 @@
-const path              = require( "path" );
-const zlib              = require( "zlib" );
-const TerserPlugin      = require( "terser-webpack-plugin" );
-const HtmlWebpackPlugin = require( "html-webpack-plugin" );
-const CompressionPlugin = require( "compression-webpack-plugin" );
+const path                 = require( "path" );
+const zlib                 = require( "zlib" );
+const MiniCssExtractPlugin = require( "mini-css-extract-plugin" );
+const TerserPlugin         = require( "terser-webpack-plugin" );
+const HtmlWebpackPlugin    = require( "html-webpack-plugin" );
+const CompressionPlugin    = require( "compression-webpack-plugin" );
 
 module.exports = {
     context: path.resolve( __dirname, "src" ),
@@ -10,7 +11,8 @@ module.exports = {
     output: {
         path: path.resolve( __dirname, "../bin/site" ),
         publicPath: "/",
-        filename: "bundle.js"
+        filename: "[name].[contenthash].js",
+        clean: true
     },
     resolve: {
         alias: {
@@ -21,14 +23,29 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /\.jsx?$/,
+                test: /\.(js|jsx)$/,
                 exclude: /node_modules/,
                 use: "babel-loader"
+            },
+            {
+                test: /\.css$/,
+                use: [ MiniCssExtractPlugin.loader, "css-loader" ]
             }
         ]
     },
     optimization: {
         minimize: true,
+        moduleIds: "deterministic",
+        runtimeChunk: "single",
+        splitChunks: {
+            cacheGroups: {
+                vendor: {
+                    test: /[\\/]node_modules[\\/]/,
+                    name: "vendors",
+                    chunks: "all",
+                },
+            },
+        },
         minimizer: [
             new TerserPlugin({
                 parallel: true,
@@ -42,6 +59,11 @@ module.exports = {
         ]
     },
     plugins: [
+        new MiniCssExtractPlugin({
+            // Long-term caching.
+            filename: "[name].[contenthash].css",
+            chunkFilename: "[id].[contenthash].css",
+        }),
         new HtmlWebpackPlugin({
             template: "./index.ejs"
         }),
@@ -63,4 +85,4 @@ module.exports = {
             threshold: 2048
         })
     ]
-};
+}
