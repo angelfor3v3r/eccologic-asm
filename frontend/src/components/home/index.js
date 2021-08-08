@@ -250,16 +250,13 @@ export default class Home extends Component
                 const byte_amount = bytes.length;
                 return(
                     <>
-                        <div class="col-md-auto ps-0">
-                            <span>
-                                {details.address.toString().padStart( 4, '0' )}
-                            </span>
+                        <div class="col-md-auto ps-0 text-secondary">
+                            {details.address}
                         </div>
                         <div class="col">
-                            <span>
                                 {bytes.map( ( val, idx ) =>
                                     {
-                                        let str = val.toString( 16 ).toUpperCase().padStart( 2, '0' );
+                                        let str = val;
                                         if( byte_amount > 1 && ( idx + 1 ) < byte_amount )
                                         {
                                             str += " ";
@@ -270,12 +267,9 @@ export default class Home extends Component
                                         );
                                     }
                                 )}
-                            </span>
                         </div>
                         <div class="col">
-                            <span>
-                                {details.mnemonic + " " + details.operands}
-                            </span>
+                            {details.mnemonic + " " + details.operands}
                         </div>
                     </>
                 );
@@ -314,7 +308,7 @@ export default class Home extends Component
                         <div class="mb-3">
                             {bytes.map( ( val, idx ) =>
                                 {
-                                    let str = val.toString( 16 ).toUpperCase().padStart( 2, '0' );
+                                    let str = val;
                                     if( byte_count > 1 && ( idx + 1 ) < byte_count )
                                     {
                                         str += ", ";

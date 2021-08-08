@@ -49,7 +49,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
 
             Json::Value res;
             res[ "error" ][ "message" ] = std::string{ msg } + help;
-            res[ "error" ][ "status" ]  = status.data();
+            res[ "error" ][ "status"  ] = status.data();
             return respond( std::move( res ), http_status );
         }
     };
@@ -225,15 +225,54 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
         const auto size{ insn->size };
         for( size_t i{}; i < size; ++i )
         {
-            const auto byte{ insn->bytes[ i ] };
+            const auto byte{ std::format( "{:02X}", insn->bytes[ i ] ) };
             bytes.append( byte ); // Add byte to partial instruction JSON byte array.
             all_bytes.append( byte ); // Add byte to full instruction JSON byte array.
         }
 
-        info[ "address"  ] = insn->address;
+        info[ "address"  ] = std::format( "{:04X}", insn->address );
         info[ "size"     ] = size;
         info[ "bytes"    ] = bytes;
         info[ "mnemonic" ] = insn->mnemonic;
+
+        /*
+        // Make numbers nicer.
+        std::string oprs{ insn->op_str };
+        const auto  oprs_len{ oprs.length() };
+        for( size_t i{}; i < oprs_len; )
+        {
+            // Very special case for "0x" prefix (we skip over it).
+            if( oprs[ i ] == '0' && ( ( i + 1 ) < oprs_len && oprs[ i + 1 ] == 'x' ) )
+            {
+                ++i;
+                continue;
+            }
+            else
+            {
+                // Scan until we find some kind of number.
+                if( std::isdigit( oprs[ i ] ) || std::isxdigit( oprs[ i ] ) )
+                {
+                    // Okay, scan until it's not a number.
+                    size_t last_num_chr_pos{};
+                    for( size_t j{ i + 1 }; j < oprs_len; ++j )
+                    {
+                        if( !std::isdigit( oprs[ j ] ) || !std::isxdigit( oprs[ j ] ) )
+                        {
+                            last_num_chr_pos = j;
+                            break;
+                        }
+                    }
+
+                    // Now, make it nice.
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+        }
+        */
+
         info[ "operands" ] = insn->op_str;
 
         bytes_detail.append( std::move( info ) );
@@ -241,8 +280,8 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
 
     // Set up the final JSON result.
     Json::Value res;
-    res[ "result" ][ "byte_count" ]   = enc_size;
-    res[ "result" ][ "bytes" ]        = all_bytes;
+    res[ "result" ][ "byte_count"   ] = enc_size;
+    res[ "result" ][ "bytes"        ] = all_bytes;
     res[ "result" ][ "bytes_detail" ] = bytes_detail;
 
     return respond( std::move( res ) );
