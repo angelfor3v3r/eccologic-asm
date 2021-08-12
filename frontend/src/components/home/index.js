@@ -250,7 +250,7 @@ export default class Home extends Component
                 const byte_amount = bytes.length;
                 return(
                     <>
-                        <div class="col-md-auto ps-0 text-secondary">
+                        <div class="col-md-auto text-secondary">
                             {details.address}
                         </div>
                         <div class="col">
@@ -304,7 +304,8 @@ export default class Home extends Component
                 const byte_count = bytes.length;
                 return(
                     <div class="container">
-                        <div class="text-info">Raw hex:</div>
+                        <div class="text-info">Raw hex</div>
+                        <hr/>
                         <div class="mb-3">
                             {bytes.map( ( val, idx ) =>
                                 {
@@ -320,8 +321,9 @@ export default class Home extends Component
                                 }
                             )}
                         </div>
-                        <div class="text-info">Disassembly:</div>
-                        <div class="container">{render_disasm( details )}</div>
+                        <div class="text-info">Disassembly</div>
+                        <hr/>
+                        {render_disasm( details )}
                     </div>
                 );
             }
@@ -367,7 +369,7 @@ export default class Home extends Component
         }
 
         return(
-            <main>
+            <>
                 <div class="container">
                     <form onSubmit={this.on_submit}>
                         <div class="mb-3">
@@ -433,7 +435,7 @@ export default class Home extends Component
                         </ul>
                     </div>
                 </div>
-            </main>
+            </>
         );
     }
 }

@@ -30,11 +30,10 @@ const std::unordered_map< std::string_view, ks_opt_value > g_ks_syntax{
     { "att",   KS_OPT_SYNTAX_ATT   }  // x86 ATT asm syntax.
 };
 
-// Handle posts to "/api/encode".
 HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
 {
     const auto respond{
-        [ &req ]( const Json::Value &json, HttpStatusCode http_status = k200OK ) noexcept ATTR_FORCEINLINE
+        [ &req ]( const Json::Value &json, HttpStatusCode http_status = k200OK ) noexcept
         {
             const auto resp{ HttpResponse::newHttpJsonResponse( json ) };
             resp->setStatusCode( http_status );
@@ -43,12 +42,12 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     };
 
     const auto respond_err{
-        [ &respond ]( std::string_view msg, std::string_view status, HttpStatusCode http_status, bool append_help = true ) noexcept ATTR_FORCEINLINE
+        [ &respond ]( const std::string& msg, std::string_view status, HttpStatusCode http_status, bool append_help = true ) noexcept
         {
-            std::string help{ ( append_help ) ? " See https://asm.eccologic.net/help for API help." : "" };
+            const std::string help{ ( append_help ) ? " See https://asm.eccologic.net/help for API help." : "" };
 
             Json::Value res;
-            res[ "error" ][ "message" ] = std::string{ msg } + help;
+            res[ "error" ][ "message" ] = msg + help;
             res[ "error" ][ "status"  ] = status.data();
             return respond( std::move( res ), http_status );
         }
@@ -130,13 +129,15 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
         return respond_err( "\"code\" key string value must not be empty.", "InvalidCodeValue", k400BadRequest );
     }
 
-    // The lambda here gets ran on return (RAII). Variables here MUST be cleaned up on exit if they're set.
+    // Variables here MUST be cleaned up on exit if they're set.
     uint8_t*   enc_code{};
     ks_engine* ks{};
     csh        cs{};
     cs_insn*   insn{};
-    const auto cleanup{ sg::make_scope_guard(
-        [ &enc_code, &ks, &insn, &cs ]() noexcept ATTR_FORCEINLINE
+
+    // The lambda here gets ran on return (RAII).
+    ScopeGuard cleanup{
+        [ &enc_code, &ks, &insn, &cs ]() noexcept
         {
             if( enc_code )
             {
@@ -158,7 +159,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
                 cs_close( &cs );
             }
         }
-    ) };
+    };
 
     // Set up Keystone.
     // TODO: Well... Maybe it would be a good idea to cache each mode & arch = ks_ptr into an unordered_map.
@@ -192,15 +193,9 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
                 err.erase( first_delim - 1, ( second_delim - first_delim ) + 2 );
                 err += '.';
             }
-            else
-            {
-                err = "";
-            }
+            else { err = ""; }
         }
-        else
-        {
-            err = "";
-        }
+        else { err = ""; }
 
         return respond_err( err, "InvalidAsmCode", k400BadRequest, false );
     }
@@ -225,19 +220,19 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
         const auto size{ insn->size };
         for( size_t i{}; i < size; ++i )
         {
-            const auto byte{ std::format( "{:02X}", insn->bytes[ i ] ) };
+            const auto byte{ fmt::format( "{:02X}", insn->bytes[ i ] ) };
             bytes.append( byte ); // Add byte to partial instruction JSON byte array.
             all_bytes.append( byte ); // Add byte to full instruction JSON byte array.
         }
 
-        info[ "address"  ] = std::format( "{:04X}", insn->address );
+        info[ "address"  ] = fmt::format( "{:04X}", insn->address );
         info[ "size"     ] = size;
         info[ "bytes"    ] = bytes;
         info[ "mnemonic" ] = insn->mnemonic;
 
-        /*
         // Make numbers nicer.
-        std::string oprs{ insn->op_str };
+        std::string ops{ insn->op_str };
+        /*
         const auto  oprs_len{ oprs.length() };
         for( size_t i{}; i < oprs_len; )
         {
@@ -273,7 +268,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
         }
         */
 
-        info[ "operands" ] = insn->op_str;
+        info[ "operands" ] = ops;
 
         bytes_detail.append( std::move( info ) );
     }

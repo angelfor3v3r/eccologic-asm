@@ -3,7 +3,7 @@
 namespace api
 {
 
-// Handle posts to "/api/encode".
+// Handle POST requests to "/api/encode".
 extern drogon::HttpResponsePtr encode( const drogon::HttpRequestPtr& req ) noexcept;
 
 } // namespace api

@@ -1,6 +1,7 @@
 const path                 = require( "path" );
 const zlib                 = require( "zlib" );
 const MiniCssExtractPlugin = require( "mini-css-extract-plugin" );
+const CssMinimizerPlugin   = require( "css-minimizer-webpack-plugin" );
 const TerserPlugin         = require( "terser-webpack-plugin" );
 const HtmlWebpackPlugin    = require( "html-webpack-plugin" );
 const CompressionPlugin    = require( "compression-webpack-plugin" );
@@ -19,44 +20,6 @@ module.exports = {
             "react": "preact/compat",
             "react-dom": "preact/compat"
         }
-    },
-    module: {
-        rules: [
-            {
-                test: /\.(js|jsx)$/,
-                exclude: /node_modules/,
-                use: "babel-loader"
-            },
-            {
-                test: /\.css$/,
-                use: [ MiniCssExtractPlugin.loader, "css-loader" ]
-            }
-        ]
-    },
-    optimization: {
-        minimize: true,
-        moduleIds: "deterministic",
-        runtimeChunk: "single",
-        splitChunks: {
-            cacheGroups: {
-                vendor: {
-                    test: /[\\/]node_modules[\\/]/,
-                    name: "vendors",
-                    chunks: "all",
-                },
-            },
-        },
-        minimizer: [
-            new TerserPlugin({
-                parallel: true,
-                extractComments: false,
-                terserOptions: {
-                    format: {
-                        comments: false
-                    }
-                }
-            })
-        ]
     },
     plugins: [
         new MiniCssExtractPlugin({
@@ -84,5 +47,44 @@ module.exports = {
             },
             threshold: 2048
         })
-    ]
+    ],
+    module: {
+        rules: [
+            {
+                test: /\.(js|jsx)$/,
+                exclude: /node_modules/,
+                use: "babel-loader"
+            },
+            {
+                test: /\.css$/,
+                use: [MiniCssExtractPlugin.loader, "css-loader"]
+            }
+        ]
+    },
+    optimization: {
+        minimize: true,
+        moduleIds: "deterministic",
+        runtimeChunk: "single",
+        splitChunks: {
+            cacheGroups: {
+                vendor: {
+                    test: /[\\/]node_modules[\\/]/,
+                    name: "vendor",
+                    chunks: "all",
+                },
+            },
+        },
+        minimizer: [
+            new TerserPlugin({
+                parallel: true,
+                extractComments: false,
+                terserOptions: {
+                    format: {
+                        comments: false
+                    }
+                }
+            }),
+            new CssMinimizerPlugin()
+        ]
+    }
 }

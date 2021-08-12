@@ -1,24 +1,21 @@
 #pragma once
 
-// Shorthands.
-#ifdef _MSC_VER
-#define ATTR_FORCEINLINE [[msvc::forceinline]]
-#else
-#define ATTR_FORCEINLINE [[gnu::always_inline]]
-#endif
-
 // STL includes.
 #include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <iostream>
-#include <format>
+#include <type_traits>
+#include <utility>
+#include <concepts>
 
-// Dependency includes.
-#include "scope_guard/scope_guard.hpp"
+// Dependency includes (2).
+#include "fmt/format.h"
 #include "drogon/drogon.h"
 #include "keystone/keystone.h"
 #include "capstone/capstone.h"
 
-// Other includes.
+// App includes.
+#include "mimalloc.h"
+#include "scope_guard.hpp"
 #include "api.hpp"

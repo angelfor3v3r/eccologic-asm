@@ -7,11 +7,12 @@
         }
     ],
     "app": {
-        "run_as_daemon": @DROGON_CFG_RUN_AS_DAEMON@,
+        "run_as_daemon": false,
         "threads_num": 0,
         "document_root": "./site",
         "br_static": true,
-        "gzip_static": true
+        "gzip_static": true,
+        "client_max_body_size": "512k"
     },
     "log": {
         "log_path": "./",
