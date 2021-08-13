@@ -9,6 +9,7 @@
 #include <utility>
 #include <concepts>
 #include <regex>
+#include <charconv>
 
 // Dependency includes (2).
 #include "mimalloc.h"

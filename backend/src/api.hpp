@@ -36,6 +36,9 @@ namespace api::detail
         res[ "error" ][ "status"  ] = status.data();
         return resp( std::move( res ), http_status );
     }
+
+    // TODO: Make a function that constructs the result that both endpoints here use. Pretty stupid to have the function copy-pasted in both endpoints...
+
 } // namespace api::detail
 
 // API route handlers.

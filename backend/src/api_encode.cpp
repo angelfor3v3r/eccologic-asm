@@ -52,7 +52,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     const auto arch_key{ json->operator[]( "arch" ) };
     if( !arch_key.isString() )
     {
-        return resp_err( "\"arch\" key value must be a string.", "InvalidArchType", k400BadRequest );
+        return resp_err( "\"arch\" value must be a string.", "InvalidArchType", k400BadRequest );
     }
 
     const auto found_ks_args{ g_ks_args.find( arch_key.asString() ) };
@@ -74,13 +74,13 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
             const auto syntax_key{ json->operator[]( "syntax" ) };
             if( !syntax_key.isString() )
             {
-                return resp_err( "\"syntax\" key value must be a string.", "InvalidSyntaxType", k400BadRequest );
+                return resp_err( "\"syntax\" value must be a string.", "InvalidSyntaxType", k400BadRequest );
             }
 
             const auto found_syntax{ g_ks_syntax.find( syntax_key.asString() ) };
             if( found_syntax == g_ks_syntax.end() )
             {
-                return resp_err( "Invalid \"syntax\" key value.", "InvalidSyntaxValue", k400BadRequest );
+                return resp_err( "Invalid \"syntax\" value.", "InvalidSyntaxValue", k400BadRequest );
             }
 
             // Only fill the syntax value in if it's not the Intel syntax.
@@ -99,13 +99,13 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     const auto code_key{ json->operator[]( "code" ) };
     if( !code_key.isString() )
     {
-        return resp_err( "\"code\" key value must be a string.", "InvalidCodeType", k400BadRequest );
+        return resp_err( "\"code\" value must be a string.", "InvalidCodeType", k400BadRequest );
     }
 
     const auto code{ code_key.asString() };
     if( code.empty() )
     {
-        return resp_err( "\"code\" key string value must not be empty.", "InvalidCodeValue", k400BadRequest );
+        return resp_err( "\"code\" value must not be empty.", "InvalidCodeValue", k400BadRequest );
     }
 
     // Variables here MUST be cleaned up on exit if they're set.
@@ -163,7 +163,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     size_t enc_size, enc_statements;
     if( ks_asm( ks, code.c_str(), 0, &enc_code, &enc_size, &enc_statements ) != KS_ERR_OK )
     {
-        // Clean-up the keystone error.
+        // Clean up the keystone error.
         std::string err{ ks_strerror( ks_errno( ks ) ) };
         if( const auto first_delim{ err.find( '(' ) }; first_delim != std::string::npos )
         {
@@ -211,23 +211,20 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
         info[ "bytes"    ] = bytes;
         info[ "mnemonic" ] = insn->mnemonic;
 
-        // Make numbers nicer.
+        // Make hexidecimal numbers nicer by uppercasing them all.
+        // Regex position 0 will have the "0x" prefix and position 1 will have a number.
         std::string      ops{ insn->op_str };
         const std::regex expr{ "(?:0[xX])([0-9a-fA-F]+)" };
         for( std::sregex_iterator it{ ops.begin(), ops.end(), expr }; it != std::sregex_iterator{}; ++it )
         {
-            // We use match/position 1 to skip the non-capture group.
             const auto match{ *it };
             auto       str{ match.str( 1 ) };
-
-            // Make the matched string uppercase.
             std::transform( str.cbegin(), str.cend(), str.begin(),
                 []( uint8_t ch )
                 {
                     return std::toupper( ch );
                 } );
 
-            // Now replace them in the original string.
             ops.replace( match.position( 1 ), str.length(), str );
         }
 

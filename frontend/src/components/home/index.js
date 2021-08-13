@@ -101,7 +101,7 @@ export default class Home extends Component
                 // Check if the JSON object was filled out.
                 if( json && json.error )
                 {
-                    // Show a user-friendly error.
+                   // Show a user-friendly error (if possible).
                     switch( json.error.status )
                     {
                         case "InvalidCodeValue":
@@ -116,9 +116,9 @@ export default class Home extends Component
                             return;
                         }
 
-                        // Show the non-user-friendly error.
                         default:
                         {
+                            // ewwww!
                             this.set_res( RT.ERR, `Error (${json.error.status}):\n${json.error.message}` );
                             return;
                         }
@@ -139,7 +139,45 @@ export default class Home extends Component
 
     decode_asm()
     {
-        // TODO
+        const data = {
+            arch: this.state.asm_arch,
+            code: this.state.asm_code
+        };
+
+        this.set_res( RT.MSG, "Please wait..." );
+
+        // Send encoding data.
+        this.encdec_post( this.dec_url, data )
+        .then( ( { status, json } ) => {
+            // Okay, was there an error status code?
+            const error = ( status >= 400 && status <= 500 ) ? true : false;
+            if( error )
+            {
+                // Check if the JSON object was filled out.
+                if( json && json.error )
+                {
+                    // Show a user-friendly error (if possible).
+                    switch( json.error.status )
+                    {
+                        default:
+                        {
+                            // ewwww!
+                            this.set_res( RT.ERR, `Error (${json.error.status}):\n${json.error.message}` );
+                            return;
+                        }
+                    }
+                }
+
+                this.set_res( RT.ERR, "Server returned an error status code." );
+                return;
+            }
+
+            // All good ^_^.
+            this.set_res( RT.DEC, json.result );
+        } )
+        .catch( ( err ) => {
+            this.set_res( RT.ERR, `Post request failed: ${err.message}.` );
+        } );
     }
 
     on_copy_as = ( evt ) =>
@@ -358,15 +396,11 @@ export default class Home extends Component
                     );
                 }
 
+                case RT.DEC:
                 case RT.ENC:
                 {
                     return render_bytes( res.val.bytes, res.val.bytes_detail );
                 }
-
-                // TODO
-                // case RT.DEC:
-                // {
-                // }
 
                 default:
                 {

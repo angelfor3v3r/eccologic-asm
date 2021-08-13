@@ -19,7 +19,7 @@ int32_t main( int32_t argc, char **argv, char **envp ) noexcept
     fw->registerHandler( "/api/decode",
         []( const HttpRequestPtr& req, std::function< void ( const HttpResponsePtr& )>&& callback )
         {
-            // callback( api::decode( req ) );
+            callback( api::decode( req ) );
         }, { Post } );
 
     // Since the primary frontend is a Single-page application (SPA) with client-side routing then I must serve the client-side frontend always.
