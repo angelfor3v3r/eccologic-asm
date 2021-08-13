@@ -112,11 +112,10 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     uint8_t*   enc_code{};
     ks_engine* ks{};
     csh        cs{};
-    cs_insn*   insn{};
 
     // The lambda here gets ran on return (RAII).
     ScopeGuard cleanup{
-        [ &enc_code, &ks, &insn, &cs ]() noexcept
+        [ &enc_code, &ks, &cs ]() noexcept
         {
             if( enc_code )
             {
@@ -126,11 +125,6 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
             if( ks )
             {
                 ks_close( ks );
-            }
-
-            if( insn )
-            {
-                cs_free( insn, 1 );
             }
 
             if( cs )
@@ -153,91 +147,40 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     // Set ASM syntax (only supported for the x86 architecture).
     if( x86 && syntax )
     {
-        if( ks_option( ks, KS_OPT_SYNTAX, *syntax ) != KS_ERR_OK )
-        {
-            return resp_err( "Internal Server Error (2).", "ServerError", k500InternalServerError );
-        }
+        ks_option( ks, KS_OPT_SYNTAX, *syntax );
     }
 
     // Encode the code string.
     size_t enc_size, enc_statements;
     if( ks_asm( ks, code.c_str(), 0, &enc_code, &enc_size, &enc_statements ) != KS_ERR_OK )
     {
-        // Clean up the keystone error.
-        std::string err{ ks_strerror( ks_errno( ks ) ) };
-        if( const auto first_delim{ err.find( '(' ) }; first_delim != std::string::npos )
-        {
-            if( const auto second_delim{ err.find( ')', first_delim + 1 ) }; second_delim != std::string::npos )
-            {
-                err.erase( first_delim - 1, ( second_delim - first_delim ) + 2 );
-                err += '.';
-            }
-            else { err = ""; }
-        }
-        else { err = ""; }
-
-        return resp_err( err, "InvalidAsmCode", k400BadRequest, false );
+        return resp_err( ks_strerror( ks_errno( ks ) ), "InvalidAsmCode", k400BadRequest, false );
     }
 
-    // Set up Capstone (We only allocate room for decoding one instruction, since that's all "cs_disasm_iter" needs).
+    // Set up Capstone.
     const auto found_cs_args{ g_cs_args.find( found_ks_args->first ) };
     if( const auto err{ cs_open( found_cs_args->second.m_arch, found_cs_args->second.m_mode, &cs ) }; err != CS_ERR_OK )
+    {
+        return resp_err( "Internal Server Error (2).", "ServerError", k500InternalServerError );
+    }
+
+    // Now decode the bytes so we can give back information about them.
+    const auto decode_res{ decode_bytes( cs, enc_code, enc_size ) };
+    if( !decode_res )
     {
         return resp_err( "Internal Server Error (3).", "ServerError", k500InternalServerError );
     }
 
-    insn = cs_malloc( cs );
+    // NOTE: I'm not checking the error code from Capstone here since I'm assuming if Keystone succeeded then Capstone will too.
 
-    // Now decode again so we can give back information about them.
-    Json::Value all_bytes, bytes_detail;
-    auto        dec_code{ (const uint8_t *)enc_code };
-    size_t      dec_size{ enc_size };
-    uint64_t    addr{};
-    while( cs_disasm_iter( cs, &dec_code, &dec_size, &addr, insn ) )
-    {
-        // Add byte to partial/full instruction JSON byte array.
-        Json::Value bytes;
-        const auto size{ insn->size };
-        for( size_t i{}; i < size; ++i )
-        {
-            const auto byte{ fmt::format( "{:02X}", insn->bytes[ i ] ) };
-            bytes.append( byte );
-            all_bytes.append( byte );
-        }
-
-        Json::Value info;
-        info[ "address"  ] = fmt::format( "{:04X}", insn->address );
-        info[ "size"     ] = size;
-        info[ "bytes"    ] = bytes;
-        info[ "mnemonic" ] = insn->mnemonic;
-
-        // Make hexidecimal numbers nicer by uppercasing them all.
-        // Regex position 0 will have the "0x" prefix and position 1 will have a number.
-        std::string      ops{ insn->op_str };
-        const std::regex expr{ "(?:0[xX])([0-9a-fA-F]+)" };
-        for( std::sregex_iterator it{ ops.begin(), ops.end(), expr }; it != std::sregex_iterator{}; ++it )
-        {
-            const auto match{ *it };
-            auto       str{ match.str( 1 ) };
-            std::transform( str.cbegin(), str.cend(), str.begin(),
-                []( uint8_t ch )
-                {
-                    return std::toupper( ch );
-                } );
-
-            ops.replace( match.position( 1 ), str.length(), str );
-        }
-
-        info[ "operands" ] = ops;
-
-        bytes_detail.append( std::move( info ) );
-    }
+    // Extract values from the decode result.
+    const auto [ res_count, res_bytes, res_detail ]{ *decode_res };
 
     // Set up the final JSON result.
     Json::Value res;
-    res[ "result" ][ "byte_count"   ] = enc_size;
-    res[ "result" ][ "bytes"        ] = all_bytes;
-    res[ "result" ][ "bytes_detail" ] = bytes_detail;
+    res[ "result" ][ "byte_count"   ] = res_count;
+    res[ "result" ][ "bytes"        ] = res_bytes;
+    res[ "result" ][ "bytes_detail" ] = res_detail;
 
     return resp( std::move( res ) );
 }

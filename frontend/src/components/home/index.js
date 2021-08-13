@@ -98,31 +98,11 @@ export default class Home extends Component
             const error = ( status >= 400 && status <= 500 ) ? true : false;
             if( error )
             {
-                // Check if the JSON object was filled out.
+                // Check if the JSON object was filled out and show an error.
                 if( json && json.error )
                 {
-                   // Show a user-friendly error (if possible).
-                    switch( json.error.status )
-                    {
-                        case "InvalidCodeValue":
-                        {
-                            this.set_res( RT.ERR, "The assembly text must not be empty." );
-                            return;
-                        }
-
-                        case "InvalidAsmCode":
-                        {
-                            this.set_res( RT.ERR, `Something is wrong with the input assembly:\n${json.error.message}` );
-                            return;
-                        }
-
-                        default:
-                        {
-                            // ewwww!
-                            this.set_res( RT.ERR, `Error (${json.error.status}):\n${json.error.message}` );
-                            return;
-                        }
-                    }
+                    this.set_res( RT.ERR, `Error (${json.error.status}):\n${json.error.message}` );
+                    return;
                 }
 
                 this.set_res( RT.ERR, "Server returned an error status code." );
@@ -153,19 +133,11 @@ export default class Home extends Component
             const error = ( status >= 400 && status <= 500 ) ? true : false;
             if( error )
             {
-                // Check if the JSON object was filled out.
+                // Check if the JSON object was filled out and show an error.
                 if( json && json.error )
                 {
-                    // Show a user-friendly error (if possible).
-                    switch( json.error.status )
-                    {
-                        default:
-                        {
-                            // ewwww!
-                            this.set_res( RT.ERR, `Error (${json.error.status}):\n${json.error.message}` );
-                            return;
-                        }
-                    }
+                    this.set_res( RT.ERR, `Error (${json.error.status}):\n${json.error.message}` );
+                    return;
                 }
 
                 this.set_res( RT.ERR, "Server returned an error status code." );

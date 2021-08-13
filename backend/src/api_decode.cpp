@@ -78,18 +78,12 @@ HttpResponsePtr decode( const HttpRequestPtr& req ) noexcept
     }
 
     // Variables here MUST be cleaned up on exit if they're set.
-    csh      cs{};
-    cs_insn* insn{};
+    csh cs{};
 
     // The lambda here gets ran on return (RAII).
     ScopeGuard cleanup{
-        [ &insn, &cs ]() noexcept
+        [ &cs ]() noexcept
         {
-            if( insn )
-            {
-                cs_free( insn, 1 );
-            }
-
             if( cs )
             {
                 cs_close( &cs );
@@ -97,84 +91,36 @@ HttpResponsePtr decode( const HttpRequestPtr& req ) noexcept
         }
     };
 
-    // Set up Capstone (We only allocate room for decoding one instruction, since that's all "cs_disasm_iter" needs).
+    // Set up Capstone.
     if( const auto err{ cs_open( found_cs_args->second.m_arch, found_cs_args->second.m_mode, &cs ) }; err != CS_ERR_OK )
     {
-        return resp_err( "Internal Server Error (3).", "ServerError", k500InternalServerError );
+        return resp_err( "Internal Server Error (1).", "ServerError", k500InternalServerError );
     }
 
-    insn = cs_malloc( cs );
+    // Let Capstone skip over "broken" instructions on its own.
+    cs_option( cs, CS_OPT_SKIPDATA, CS_OPT_ON );
 
     // Now decode the bytes so we can give back information about them.
-    Json::Value all_bytes, bytes_detail;
-    auto        dec_code{ (const uint8_t *)bytes.data() };
-    const auto  byte_count{ bytes.size() };
-    size_t      dec_size{ byte_count };
-    uint64_t    addr{};
-    while( cs_disasm_iter( cs, &dec_code, &dec_size, &addr, insn ) )
+    const auto decode_res{ decode_bytes( cs, bytes.data(), bytes.size() ) };
+    if( !decode_res )
     {
-        // Add byte to partial/full instruction JSON byte array.
-        Json::Value cur_bytes;
-        const auto size{ insn->size };
-        for( size_t i{}; i < size; ++i )
-        {
-            const auto byte{ fmt::format( "{:02X}", insn->bytes[ i ] ) };
-            cur_bytes.append( byte );
-            all_bytes.append( byte );
-        }
-
-        Json::Value info;
-        info[ "address"  ] = fmt::format( "{:04X}", insn->address );
-        info[ "size"     ] = size;
-        info[ "bytes"    ] = cur_bytes;
-        info[ "mnemonic" ] = insn->mnemonic;
-
-        // Make hexidecimal numbers nicer by uppercasing them all.
-        // Regex position 0 will have the "0x" prefix and position 1 will have a number.
-        std::string      ops{ insn->op_str };
-        const std::regex expr{ "(?:0[xX])([0-9a-fA-F]+)" };
-        for( std::sregex_iterator it{ ops.begin(), ops.end(), expr }; it != std::sregex_iterator{}; ++it )
-        {
-            const auto match{ *it };
-            auto       str{ match.str( 1 ) };
-            std::transform( str.cbegin(), str.cend(), str.begin(),
-                []( uint8_t ch )
-                {
-                    return std::toupper( ch );
-                } );
-
-            ops.replace( match.position( 1 ), str.length(), str );
-        }
-
-        info[ "operands" ] = ops;
-
-        bytes_detail.append( std::move( info ) );
+        return resp_err( "Internal Server Error (2).", "ServerError", k500InternalServerError );
     }
 
     // Did some error happen when disassembling?
     if( const auto ec{ cs_errno( cs ) }; ec != CS_ERR_OK )
     {
-        // Clean up the capstone error.
-        std::string err{ cs_strerror( ec ) };
-        if( const auto first_delim{ err.find( '(' ) }; first_delim != std::string::npos )
-        {
-            if( const auto second_delim{ err.find( ')', first_delim + 1 ) }; second_delim != std::string::npos )
-            {
-                err.erase( first_delim - 1, ( second_delim - first_delim ) + 2 );
-                err += '.';
-            }
-            else { err = ""; }
-        }
-        else { err = ""; }
-
-        return resp_err( err, "InvalidAsmCode", k400BadRequest, false );
+        return resp_err( cs_strerror( ec ), "InvalidAsmCode", k400BadRequest, false );
     }
+
+    // Extract values from the decode result.
+    const auto [ res_count, res_bytes, res_detail ]{ *decode_res };
 
     // Set up the final JSON result.
     Json::Value res;
-    res[ "result" ][ "byte_count"   ] = byte_count;
-    res[ "result" ][ "bytes"        ] = all_bytes;
-    res[ "result" ][ "bytes_detail" ] = bytes_detail;
+    res[ "result" ][ "byte_count"   ] = res_count;
+    res[ "result" ][ "bytes"        ] = res_bytes;
+    res[ "result" ][ "bytes_detail" ] = res_detail;
 
     return resp( std::move( res ) );
 }

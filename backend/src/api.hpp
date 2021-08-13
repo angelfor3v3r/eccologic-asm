@@ -37,8 +37,66 @@ namespace api::detail
         return resp( std::move( res ), http_status );
     }
 
-    // TODO: Make a function that constructs the result that both endpoints here use. Pretty stupid to have the function copy-pasted in both endpoints...
+    // TODO: Capstone supports "CS_OPT_MODE". Maybe it's faster than allocating a new Capstone state each time?
 
+    // Decodes bytes for both API endpoints and returns two JOSN objects.
+    inline std::optional< std::tuple< size_t, Json::Value, Json::Value > > decode_bytes( csh cs, const uint8_t* bytes, size_t len )
+    {
+        const auto insn{ cs_malloc( cs ) };
+        if( !insn )
+        {
+            return {};
+        }
+
+        // Now decode the bytes so we can give back information about them.
+        Json::Value all_bytes, bytes_detail;
+        uint64_t    addr{};
+        size_t      decoded{};
+        while( cs_disasm_iter( cs, &bytes, &len, &addr, insn ) )
+        {
+            // Add byte to partial/full instruction JSON byte array.
+            Json::Value cur_bytes;
+            const auto size{ insn->size };
+            for( size_t i{}; i < size; ++i )
+            {
+                const auto byte{ fmt::format( "{:02X}", insn->bytes[ i ] ) };
+                cur_bytes.append( byte );
+                all_bytes.append( byte );
+            }
+
+            Json::Value info;
+            info[ "address"  ] = fmt::format( "{:04X}", insn->address );
+            info[ "size"     ] = size;
+            info[ "bytes"    ] = cur_bytes;
+            info[ "mnemonic" ] = insn->mnemonic;
+
+            // Make hexidecimal numbers nicer by uppercasing them all.
+            // Regex position 0 will have the "0x" prefix and position 1 will have a number.
+            std::string      ops{ insn->op_str };
+            const std::regex expr{ "(?:0[xX])([0-9a-fA-F]+)" };
+            for( std::sregex_iterator it{ ops.begin(), ops.end(), expr }; it != std::sregex_iterator{}; ++it )
+            {
+                const auto match{ *it };
+                auto       str{ match.str( 1 ) };
+                std::transform( str.cbegin(), str.cend(), str.begin(),
+                    []( uint8_t ch )
+                    {
+                        return std::toupper( ch );
+                    } );
+
+                ops.replace( match.position( 1 ), str.length(), str );
+            }
+
+            info[ "operands" ] = ops;
+            bytes_detail.append( std::move( info ) );
+
+            ++decoded;
+        }
+
+        cs_free( insn, 1 );
+
+        return { { decoded, all_bytes, bytes_detail } };
+    }
 } // namespace api::detail
 
 // API route handlers.
