@@ -5,7 +5,7 @@ Provides a web server that allows for x86/AArch64 assembling & disassembling thr
 Well... because it was fun. While other websites like this exist (and some are even better), I wanted to take my own approach to it and make it open source.
 
 ## Building & Usage 🔨👷
-The preferred way to use this project with little hassle is to just use [Docker](https://www.docker.com/). I've provded a `Dockerfile` and `docker-compose.yml` for that reason.
+The preferred way to use this project with little hassle is to just use [Docker](https://www.docker.com/). For your convenience, I've provided `Dockerfile` and `docker-compose` files in the repository.
 
 This project is only tested and working on Windows (Windows 10 w/ MSVC) & Linux (Debian (Bullseye) w/ GCC).\
 The web server currently only serves over HTTP (Port `80` by default) and does **not** rate limit. Ideally you'd run this all behind a reverse proxy and configure rate limits, etc yourself.
@@ -16,7 +16,7 @@ Prerequisites:
 * [Node.js](https://nodejs.org/en/download/)
 * A C++20 ready compiler.
 
-Oh and for Linux, you'll need `bash` too.
+Oh and for Linux you'll need `bash` too.
 
 If you haven't already, clone the repository into some directory.
 ```cmd
@@ -35,7 +35,7 @@ To build for Linux:
 > ./build.sh
 ```
 
-And finally, you need to build the frontend:
+And finally, you need to build the frontend inside it's directory too:
 ```cmd
 > cd eccologic-asm/frontend
 > npm install
@@ -45,13 +45,14 @@ And finally, you need to build the frontend:
 Once finished, you'll end up with a `bin` folder in `eccologic-asm`.
 
 * On Windows, you can just run the `asm.exe`.
-* On Linux you **MUST** run the binary with `libmimalloc` like so: `env LD_PRELOAD=/eccologic-asm/bin/libmimalloc.so /eccologic-asm/bin/asm`.
+* On Linux you **MUST** run the binary with `libmimalloc.so` like so: `env LD_PRELOAD=/eccologic-asm/bin/libmimalloc.so /eccologic-asm/bin/asm`.
 
 If all went well then the website will be accessible from port `80`! 🎉
 
 ## Credits ❤️
 * [Angelfor3v3r](https://github.com/angelfor3v3r) - Creator & Lead programmer.
-* [JosiahWhite](https://github.com/JosiahWhite) - Frontend programming help.
+* [Cursey](https://github.com/cursey) - Backend programming, General help & Library recommendations.
+* [JosiahWhite](https://github.com/JosiahWhite) - Frontend programming.
 * [Dom](https://github.com/domve) - General help & Library recommendations.
 
 ... And an additional thank you to all the amazing creators & contributors from the following projects:
@@ -71,4 +72,4 @@ If all went well then the website will be accessible from port `80`! 🎉
 * [bootswatch](https://github.com/thomaspark/bootswatch/)
 * [CodeMirror](https://github.com/codemirror/CodeMirror)
 
-None of this would've been possible without you! Thank you for all your work.
+None of this would've been possible without you! Thank you for all of your hard work.

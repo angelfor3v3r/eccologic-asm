@@ -1,8 +1,6 @@
 #include "mimalloc-new-delete.h"
 #include "main.hpp"
 
-using namespace drogon;
-
 int32_t main( int32_t argc, char **argv, char **envp ) noexcept
 {
     LOG_INFO << fmt::format( "Using mimalloc version: {}\n", mi_version() );

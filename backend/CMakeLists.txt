@@ -34,6 +34,7 @@ find_library(CAPSTONE_LIB capstone REQUIRED)
 # Source files are relative to "./src".
 set(SRC_FILES
     api_encode.cpp
+    api_decode.cpp
     main.cpp)
 list(TRANSFORM SRC_FILES PREPEND "src/")
 add_executable(${PROJECT_NAME} ${SRC_FILES})

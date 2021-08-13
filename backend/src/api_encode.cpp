@@ -1,9 +1,9 @@
 #include "main.hpp"
 
-using namespace drogon;
-
 namespace api
 {
+
+using namespace detail;
 
 // Arguments for "ks_open".
 struct KeystoneOpenArgs
@@ -32,54 +32,33 @@ const std::unordered_map< std::string_view, ks_opt_value > g_ks_syntax{
 
 HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
 {
-    const auto respond{
-        [ &req ]( const Json::Value &json, HttpStatusCode http_status = k200OK ) noexcept
-        {
-            const auto resp{ HttpResponse::newHttpJsonResponse( json ) };
-            resp->setStatusCode( http_status );
-            return resp;
-        }
-    };
-
-    const auto respond_err{
-        [ &respond ]( const std::string& msg, std::string_view status, HttpStatusCode http_status, bool append_help = true ) noexcept
-        {
-            const std::string help{ ( append_help ) ? " See https://asm.eccologic.net/help for API help." : "" };
-
-            Json::Value res;
-            res[ "error" ][ "message" ] = msg + help;
-            res[ "error" ][ "status"  ] = status.data();
-            return respond( std::move( res ), http_status );
-        }
-    };
-
     const auto json{ req->jsonObject() };
     if( !json )
     {
-        return respond_err( "Invalid JSON object or missing \"Content-Type\" request header.", "InvalidJson", k400BadRequest );
+        return resp_err( "Invalid JSON object or missing \"Content-Type\" request header.", "InvalidJson", k400BadRequest );
     }
 
     // Check keys & key types in the request JSON.
     if( !json->isMember( "arch" ) )
     {
-        return respond_err( "JSON object is missing the \"arch\" key.", "MissingArchKey", k400BadRequest );
+        return resp_err( "JSON object is missing the \"arch\" key.", "MissingArchKey", k400BadRequest );
     }
     else if( !json->isMember( "code" ) )
     {
-        return respond_err( "JSON object is missing the \"code\" key.", "MissingCodeKey", k400BadRequest );
+        return resp_err( "JSON object is missing the \"code\" key.", "MissingCodeKey", k400BadRequest );
     }
 
     // Resolve architecture value from the request JSON.
     const auto arch_key{ json->operator[]( "arch" ) };
     if( !arch_key.isString() )
     {
-        return respond_err( "\"arch\" key value must be a string.", "InvalidArchType", k400BadRequest );
+        return resp_err( "\"arch\" key value must be a string.", "InvalidArchType", k400BadRequest );
     }
 
     const auto found_ks_args{ g_ks_args.find( arch_key.asString() ) };
     if( found_ks_args == g_ks_args.end() )
     {
-        return respond_err( "Invalid \"arch\" value.", "InvalidArchValue", k400BadRequest );
+        return resp_err( "Invalid \"arch\" value.", "InvalidArchValue", k400BadRequest );
     }
 
     // Is there a syntax key?
@@ -95,13 +74,13 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
             const auto syntax_key{ json->operator[]( "syntax" ) };
             if( !syntax_key.isString() )
             {
-                return respond_err( "\"syntax\" key value must be a string.", "InvalidSyntaxType", k400BadRequest );
+                return resp_err( "\"syntax\" key value must be a string.", "InvalidSyntaxType", k400BadRequest );
             }
 
             const auto found_syntax{ g_ks_syntax.find( syntax_key.asString() ) };
             if( found_syntax == g_ks_syntax.end() )
             {
-                return respond_err( "Invalid \"syntax\" key value.", "InvalidSyntaxValue", k400BadRequest );
+                return resp_err( "Invalid \"syntax\" key value.", "InvalidSyntaxValue", k400BadRequest );
             }
 
             // Only fill the syntax value in if it's not the Intel syntax.
@@ -112,7 +91,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
         }
         else
         {
-            return respond_err( "The \"syntax\" key is only valid for the x86 architecture.", "InvalidSytnaxKey", k400BadRequest );
+            return resp_err( "The \"syntax\" key is only valid for the x86 architecture.", "InvalidSytnaxKey", k400BadRequest );
         }
     }
 
@@ -120,13 +99,13 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     const auto code_key{ json->operator[]( "code" ) };
     if( !code_key.isString() )
     {
-        return respond_err( "\"code\" key value must be a string.", "InvalidCodeType", k400BadRequest );
+        return resp_err( "\"code\" key value must be a string.", "InvalidCodeType", k400BadRequest );
     }
 
     const auto code{ code_key.asString() };
     if( code.empty() )
     {
-        return respond_err( "\"code\" key string value must not be empty.", "InvalidCodeValue", k400BadRequest );
+        return resp_err( "\"code\" key string value must not be empty.", "InvalidCodeValue", k400BadRequest );
     }
 
     // Variables here MUST be cleaned up on exit if they're set.
@@ -168,7 +147,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     const auto mode{ found_ks_args->second.m_mode };
     if( const auto err{ ks_open( arch, mode, &ks ) }; err != KS_ERR_OK )
     {
-        return respond_err( "Internal Server Error (1).", "ServerError", k500InternalServerError );
+        return resp_err( "Internal Server Error (1).", "ServerError", k500InternalServerError );
     }
 
     // Set ASM syntax (only supported for the x86 architecture).
@@ -176,7 +155,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     {
         if( ks_option( ks, KS_OPT_SYNTAX, *syntax ) != KS_ERR_OK )
         {
-            return respond_err( "Internal Server Error (2).", "ServerError", k500InternalServerError );
+            return resp_err( "Internal Server Error (2).", "ServerError", k500InternalServerError );
         }
     }
 
@@ -197,14 +176,14 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
         }
         else { err = ""; }
 
-        return respond_err( err, "InvalidAsmCode", k400BadRequest, false );
+        return resp_err( err, "InvalidAsmCode", k400BadRequest, false );
     }
 
     // Set up Capstone (We only allocate room for decoding one instruction, since that's all "cs_disasm_iter" needs).
-    const auto cs_args{ g_cs_args.find( found_ks_args->first ) };
-    if( const auto err{ cs_open( cs_args->second.m_arch, cs_args->second.m_mode, &cs ) }; err != CS_ERR_OK )
+    const auto found_cs_args{ g_cs_args.find( found_ks_args->first ) };
+    if( const auto err{ cs_open( found_cs_args->second.m_arch, found_cs_args->second.m_mode, &cs ) }; err != CS_ERR_OK )
     {
-        return respond_err( "Internal Server Error (3).", "ServerError", k500InternalServerError );
+        return resp_err( "Internal Server Error (3).", "ServerError", k500InternalServerError );
     }
 
     insn = cs_malloc( cs );
@@ -216,57 +195,41 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     uint64_t    addr{};
     while( cs_disasm_iter( cs, &dec_code, &dec_size, &addr, insn ) )
     {
-        Json::Value info, bytes;
+        // Add byte to partial/full instruction JSON byte array.
+        Json::Value bytes;
         const auto size{ insn->size };
         for( size_t i{}; i < size; ++i )
         {
             const auto byte{ fmt::format( "{:02X}", insn->bytes[ i ] ) };
-            bytes.append( byte ); // Add byte to partial instruction JSON byte array.
-            all_bytes.append( byte ); // Add byte to full instruction JSON byte array.
+            bytes.append( byte );
+            all_bytes.append( byte );
         }
 
+        Json::Value info;
         info[ "address"  ] = fmt::format( "{:04X}", insn->address );
         info[ "size"     ] = size;
         info[ "bytes"    ] = bytes;
         info[ "mnemonic" ] = insn->mnemonic;
 
         // Make numbers nicer.
-        std::string ops{ insn->op_str };
-        /*
-        const auto  oprs_len{ oprs.length() };
-        for( size_t i{}; i < oprs_len; )
+        std::string      ops{ insn->op_str };
+        const std::regex expr{ "(?:0[xX])([0-9a-fA-F]+)" };
+        for( std::sregex_iterator it{ ops.begin(), ops.end(), expr }; it != std::sregex_iterator{}; ++it )
         {
-            // Very special case for "0x" prefix (we skip over it).
-            if( oprs[ i ] == '0' && ( ( i + 1 ) < oprs_len && oprs[ i + 1 ] == 'x' ) )
-            {
-                ++i;
-                continue;
-            }
-            else
-            {
-                // Scan until we find some kind of number.
-                if( std::isdigit( oprs[ i ] ) || std::isxdigit( oprs[ i ] ) )
-                {
-                    // Okay, scan until it's not a number.
-                    size_t last_num_chr_pos{};
-                    for( size_t j{ i + 1 }; j < oprs_len; ++j )
-                    {
-                        if( !std::isdigit( oprs[ j ] ) || !std::isxdigit( oprs[ j ] ) )
-                        {
-                            last_num_chr_pos = j;
-                            break;
-                        }
-                    }
+            // We use match/position 1 to skip the non-capture group.
+            const auto match{ *it };
+            auto       str{ match.str( 1 ) };
 
-                    // Now, make it nice.
-                }
-                else
+            // Make the matched string uppercase.
+            std::transform( str.cbegin(), str.cend(), str.begin(),
+                []( uint8_t ch )
                 {
-                    ++i;
-                }
-            }
+                    return std::toupper( ch );
+                } );
+
+            // Now replace them in the original string.
+            ops.replace( match.position( 1 ), str.length(), str );
         }
-        */
 
         info[ "operands" ] = ops;
 
@@ -279,7 +242,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
     res[ "result" ][ "bytes"        ] = all_bytes;
     res[ "result" ][ "bytes_detail" ] = bytes_detail;
 
-    return respond( std::move( res ) );
+    return resp( std::move( res ) );
 }
 
 } // namespace api
