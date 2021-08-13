@@ -188,7 +188,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
 
     insn = cs_malloc( cs );
 
-    // Now decode again so we can give back information.
+    // Now decode again so we can give back information about them.
     Json::Value all_bytes, bytes_detail;
     auto        dec_code{ (const uint8_t *)enc_code };
     size_t      dec_size{ enc_size };

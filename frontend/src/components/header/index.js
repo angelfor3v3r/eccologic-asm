@@ -17,6 +17,9 @@ export default function Header()
                                 <NavLink to="/" className="nav-link" aria-current="false" exact>Home</NavLink>
                             </li>
                             <li class="nav-item">
+                                <NavLink to="/about" className="nav-link" aria-current="false">About</NavLink>
+                            </li>
+                            <li class="nav-item">
                                 <NavLink to="/help" className="nav-link" aria-current="false">Help</NavLink>
                             </li>
                         </ul>

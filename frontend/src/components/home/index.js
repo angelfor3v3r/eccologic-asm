@@ -23,11 +23,12 @@ export default class Home extends Component
 
         // State/values from HTML elements (and some default values).
         this.state = {
-            asm_mode:       "encode",
-            asm_arch:       "x86-64",
-            asm_x86_synatx: "intel",
-            asm_code:       "",
-            res:            ""
+            asm_mode:               "encode",
+            asm_arch:               "x86-64",
+            asm_x86_synatx:         "intel",
+            asm_x86_syntax_enabled: true,
+            asm_code:               "",
+            res:                    ""
         };
     }
 
@@ -197,7 +198,15 @@ export default class Home extends Component
 
     on_change = ( evt ) =>
     {
-        this.setState( { [evt.target.id]: evt.target.value } );
+        const id  = evt.target.id;
+        const val = evt.target.value;
+        this.setState( { [id]: val } );
+
+        // Very special case for disabling the Architecture dropdown.
+        if( id === "asm_arch" )
+        {
+            this.setState( { asm_x86_syntax_enabled: val.startsWith( "x86" ) ? true : false } );
+        }
     }
 
     on_submit = ( evt ) =>
@@ -402,7 +411,7 @@ export default class Home extends Component
                             </div>
                             <div class="col-3">
                                 <div class="form-floating">
-                                    <select class="form-select" id="asm_x86_synatx" onChange={this.on_change}>
+                                    <select class="form-select" id="asm_x86_synatx" onChange={this.on_change} disabled={!this.state.asm_x86_syntax_enabled}>
                                         <option value="intel" selected>Intel</option>
                                         <option value="nasm">NASM</option>
                                         <option value="att">AT&T</option>
