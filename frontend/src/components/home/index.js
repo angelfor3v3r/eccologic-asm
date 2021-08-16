@@ -387,7 +387,7 @@ export default class Home extends Component
                         <label for="asm_code" class="form-label">Assembly</label>
                         <textarea class="form-control" type="text" id="asm_code" rows="6" ref={this.code_editor}></textarea>
                     </div>
-                    <div class="row g-2 align-items-center">
+                    <div class="row g-2">
                         <div class="col-3 d-grid">
                             <button class="btn btn-primary btn-lg" type="submit">Submit</button>
                         </div>
