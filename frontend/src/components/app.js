@@ -11,20 +11,33 @@ import NotFound from "./not-found";
 import Footer   from "./footer";
 
 // Primary application.
-export default function App()
+export default class App extends Component
 {
-    return(
-        <BrowserRouter>
-            <Header/>
-            <div class="container">
-                <Switch>
-                    <Route path="/" component={Home} exact/>
-                    <Route path="/about" component={About}/>
-                    <Route path="/help" component={Help}/>
-                    <Route component={NotFound}/>
-                </Switch>
-                <Footer/>
-            </div>
-        </BrowserRouter>
-    );
+    constructor()
+    {
+        super();
+    }
+
+    componentDidMount()
+    {
+        document.title = "Eccologic ASM";
+    }
+
+    render()
+    {
+        return(
+            <BrowserRouter>
+                <Header/>
+                <div class="container">
+                    <Switch>
+                        <Route exact path="/" component={Home} exact/>
+                        <Route exact path="/about" component={About}/>
+                        <Route exact path="/help" component={Help}/>
+                        <Route component={NotFound}/>
+                    </Switch>
+                    <Footer/>
+                </div>
+            </BrowserRouter>
+        );
+    }
 }

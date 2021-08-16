@@ -1,5 +1,5 @@
 import { h, Fragment, Component } from "preact";
-import { Markdown }               from "markdown-to-jsx";
+import Markdown                   from "markdown-to-jsx";
 
 export default class About extends Component
 {
@@ -17,7 +17,7 @@ export default class About extends Component
     {
         return(
             <main>
-                <Markdown># Hello world!</Markdown>
+                <Markdown># Coming soon...</Markdown>
             </main>
         );
     }
