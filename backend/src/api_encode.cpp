@@ -173,16 +173,7 @@ HttpResponsePtr encode( const HttpRequestPtr& req ) noexcept
 
     // NOTE: I'm not checking the error code from Capstone here since I'm assuming if Keystone succeeded then Capstone will too.
 
-    // Extract values from the decode result.
-    const auto [ res_count, res_bytes, res_detail ]{ *decode_res };
-
-    // Set up the final JSON result.
-    Json::Value res;
-    res[ "result" ][ "byte_count"   ] = res_count;
-    res[ "result" ][ "bytes"        ] = res_bytes;
-    res[ "result" ][ "bytes_detail" ] = res_detail;
-
-    return resp( std::move( res ) );
+    return resp( std::move( *decode_res ) );
 }
 
 } // namespace api

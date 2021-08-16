@@ -1,5 +1,4 @@
-import codemirror from "codemirror";
-import CodeMirror from "codemirror";
+import CodeMirror                            from "codemirror";
 import { h, Fragment, Component, createRef } from "preact";
 
 // Result type.
@@ -34,7 +33,7 @@ export default class Home extends Component
 
     componentDidMount()
     {
-        this.code_mirror = codemirror.fromTextArea( this.code_editor.current, {
+        this.code_mirror = CodeMirror.fromTextArea( this.code_editor.current, {
             lineNumbers: true,
             theme: "material",
             indentUnit: 4,
@@ -322,10 +321,9 @@ export default class Home extends Component
 
                 const byte_count = bytes.length;
                 return(
-                    <div class="container">
+                    <>
                         <div class="text-info">Raw hex</div>
-                        <hr/>
-                        <div class="mb-3">
+                        <div class="mb-3 border-bottom">
                             {bytes.map( ( val, idx ) =>
                                 {
                                     let str = val;
@@ -341,9 +339,8 @@ export default class Home extends Component
                             )}
                         </div>
                         <div class="text-info">Disassembly</div>
-                        <hr/>
                         {render_disasm( details )}
-                    </div>
+                    </>
                 );
             }
 
@@ -384,73 +381,68 @@ export default class Home extends Component
         }
 
         return(
-            <>
-                <div class="container">
-                    <form onSubmit={this.on_submit}>
-                        <div class="mb-3">
-                            <label for="asm_code" class="form-label">Assembly</label>
-                            <textarea class="form-control" type="text" id="asm_code" rows="6" ref={this.code_editor}></textarea>
+            <main>
+                <form onSubmit={this.on_submit}>
+                    <div class="my-3">
+                        <label for="asm_code" class="form-label">Assembly</label>
+                        <textarea class="form-control" type="text" id="asm_code" rows="6" ref={this.code_editor}></textarea>
+                    </div>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-3 d-grid">
+                            <button class="btn btn-primary btn-lg" type="submit">Submit</button>
                         </div>
-                        <div class="row g-2 align-items-center">
-                            <div class="col-3 d-grid mx-auto">
-                                <button class="btn btn-primary btn-lg" type="submit">Submit</button>
-                            </div>
-                            <div class="col-3">
-                                <div class="form-floating">
-                                    <select class="form-select" id="asm_mode" onChange={this.on_change}>
-                                        <option value="encode" selected>Encode</option>
-                                        <option value="decode">Decode</option>
-                                    </select>
-                                    <label for="asm_mode">Mode</label>
-                                </div>
-                            </div>
-                            <div class="col-3">
-                                <div class="form-floating">
-                                    <select class="form-select" id="asm_arch" onChange={this.on_change}>
-                                        <option value="x86-64" selected>x86 (64-bit)</option>
-                                        <option value="x86-32">x86 (32-bit)</option>
-                                        <option value="x86-16">x86 (16-bit)</option>
-                                        <option value="aarch64">AArch64 (ARM64)</option>
-                                    </select>
-                                    <label for="asm_arch">Architecture</label>
-                                </div>
-                            </div>
-                            <div class="col-3">
-                                <div class="form-floating">
-                                    <select class="form-select" id="asm_x86_synatx" onChange={this.on_change} disabled={!this.state.asm_x86_syntax_enabled}>
-                                        <option value="intel" selected>Intel</option>
-                                        <option value="nasm">NASM</option>
-                                        <option value="att">AT&T</option>
-                                    </select>
-                                    <label for="asm_x86_synatx">Syntax (x86 only)</label>
-                                </div>
+                        <div class="col-3">
+                            <div class="form-floating">
+                                <select class="form-select" id="asm_mode" onChange={this.on_change}>
+                                    <option value="encode" selected>Encode</option>
+                                    <option value="decode">Decode</option>
+                                </select>
+                                <label for="asm_mode">Mode</label>
                             </div>
                         </div>
-                    </form>
-                </div>
-                <div class="container">
-                    <hr/>
-                    <div class="card mb-3" id="result">
-                        <span class="card-header">Result</span>
-                        <div class="card-body" style="white-space: pre-wrap">
-                            {render_result()}
+                        <div class="col-3">
+                            <div class="form-floating">
+                                <select class="form-select" id="asm_arch" onChange={this.on_change}>
+                                    <option value="x86-64" selected>x86 (64-bit)</option>
+                                    <option value="x86-32">x86 (32-bit)</option>
+                                    <option value="x86-16">x86 (16-bit)</option>
+                                    <option value="aarch64">AArch64 (ARM64)</option>
+                                </select>
+                                <label for="asm_arch">Architecture</label>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="form-floating">
+                                <select class="form-select" id="asm_x86_synatx" onChange={this.on_change} disabled={!this.state.asm_x86_syntax_enabled}>
+                                    <option value="intel" selected>Intel</option>
+                                    <option value="nasm">NASM</option>
+                                    <option value="att">AT&T</option>
+                                </select>
+                                <label for="asm_x86_synatx">Syntax (x86 only)</label>
+                            </div>
                         </div>
                     </div>
-                    <div class="dropdown">
-                        <button class="btn btn-primary dropdown-toggle" type="button" id="copy_result_as" data-bs-toggle="dropdown">
-                            Copy as...
-                        </button>
-                        <ul class="dropdown-menu" onclick={this.on_copy_as}>
-                            <li><a class="dropdown-item" href="" id="hex">Raw hex</a></li>
-                            <li><a class="dropdown-item" href="" id="str">String</a></li>
-                            <li><a class="dropdown-item" href="" id="arr">Array</a></li>
-                            <li><a class="dropdown-item" href="" id="cpp">C++11</a></li>
-                            <li><a class="dropdown-item" href="" id="c">C</a></li>
-                            <li><a class="dropdown-item" href="" id="py">Python</a></li>
-                        </ul>
+                </form>
+                <div class="card my-3" id="result">
+                    <span class="card-header">Result</span>
+                    <div class="card-body" style="white-space: pre-wrap">
+                        {render_result()}
                     </div>
                 </div>
-            </>
+                <div class="dropdown">
+                    <button class="btn btn-primary dropdown-toggle" type="button" id="copy_result_as" data-bs-toggle="dropdown">
+                        Copy as...
+                    </button>
+                    <ul class="dropdown-menu" onclick={this.on_copy_as}>
+                        <li><a class="dropdown-item" href="" id="hex">Raw hex</a></li>
+                        <li><a class="dropdown-item" href="" id="str">String</a></li>
+                        <li><a class="dropdown-item" href="" id="arr">Array</a></li>
+                        <li><a class="dropdown-item" href="" id="cpp">C++11</a></li>
+                        <li><a class="dropdown-item" href="" id="c">C</a></li>
+                        <li><a class="dropdown-item" href="" id="py">Python</a></li>
+                    </ul>
+                </div>
+            </main>
         );
     }
 }

@@ -7,6 +7,7 @@ const HtmlWebpackPlugin    = require( "html-webpack-plugin" );
 const CompressionPlugin    = require( "compression-webpack-plugin" );
 
 module.exports = {
+    mode: "production",
     context: path.resolve( __dirname, "src" ),
     entry: "./index.js",
     output: {
@@ -63,6 +64,7 @@ module.exports = {
     },
     optimization: {
         minimize: true,
+        usedExports: true,
         moduleIds: "deterministic",
         runtimeChunk: "single",
         splitChunks: {

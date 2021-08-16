@@ -1,10 +1,24 @@
-import { h } from "preact";
+import { h, Fragment, Component } from "preact";
+import { Markdown }               from "markdown-to-jsx";
 
-export default function About()
+export default class About extends Component
 {
-    return(
-        <main>
-            <h1>About page</h1>
-        </main>
-    );
+    constructor()
+    {
+        super();
+    }
+
+    componentDidMount()
+    {
+
+    }
+
+    render()
+    {
+        return(
+            <main>
+                <Markdown># Hello world!</Markdown>
+            </main>
+        );
+    }
 }

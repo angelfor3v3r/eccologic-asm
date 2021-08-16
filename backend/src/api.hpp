@@ -40,7 +40,7 @@ namespace api::detail
     // TODO: Capstone supports "CS_OPT_MODE". Maybe it's faster than allocating a new Capstone state each time?
 
     // Decodes bytes for both API endpoints and returns two JOSN objects.
-    inline std::optional< std::tuple< size_t, Json::Value, Json::Value > > decode_bytes( csh cs, const uint8_t* bytes, size_t len )
+    inline std::optional< Json::Value > decode_bytes( csh cs, const uint8_t* bytes, size_t len )
     {
         const auto insn{ cs_malloc( cs ) };
         if( !insn )
@@ -73,7 +73,7 @@ namespace api::detail
             // Make hexidecimal numbers nicer by uppercasing them all.
             // Regex position 0 will have the "0x" prefix and position 1 will have a number.
             std::string      ops{ insn->op_str };
-            const std::regex expr{ "(?:0[xX])([0-9a-fA-F]+)" };
+            const std::regex expr{ R"((?:0[xX])([0-9a-fA-F]+))" };
             for( std::sregex_iterator it{ ops.begin(), ops.end(), expr }; it != std::sregex_iterator{}; ++it )
             {
                 const auto match{ *it };
@@ -95,7 +95,13 @@ namespace api::detail
 
         cs_free( insn, 1 );
 
-        return { { decoded, all_bytes, bytes_detail } };
+        // Set up the final JSON result.
+        Json::Value res;
+        res[ "result" ][ "byte_count"   ] = decoded;
+        res[ "result" ][ "bytes"        ] = all_bytes;
+        res[ "result" ][ "bytes_detail" ] = bytes_detail;
+
+        return { res };
     }
 } // namespace api::detail
 

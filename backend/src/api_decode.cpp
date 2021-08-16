@@ -50,20 +50,14 @@ HttpResponsePtr decode( const HttpRequestPtr& req ) noexcept
     }
 
     // Here we're going to parse the hex bytes into a vector.
-    // Regex position 0 contains some prefix ("0x" or "\x") and position 1 contains the number.
-    // TODO: I really should make this work with more number patterns.
-    //       Theres still some issues to work out such as "0x550x123" not parsing the "0x" prefix correctly (it counts the 0 as a number from the capture).
-    //       ... And maybe add support for parsing long numbers in 2-byte intervals (i.e. AABBCC = {0xAA, 0xBB, 0xCC}).
-    //       But honestly this makes me question if im over-engineering this. Will it really be hard for people to just pass bytes with a prefix before each number (such as ';' or a space...).
-    //       As much as I *want* to make this as dynamic as possible... I think being strict about the input string would be smarter and less bug-prone (but not as user-friendly?).
-    //       Whatever... We'll figure out something eventually.
+    // Regex position 0 contains some prefix ("0x", "\x" or just a number) and position 1 contains JUST the number.
     std::vector< uint8_t > bytes;
-    const std::regex       expr{ "(?:0[xX]|\\\\[xX])([0-9a-fA-F]+)" };
+    const std::regex       expr{ R"((?:0[xX]|\\[xX])*([0-9a-fA-F]+))" };
     for( std::sregex_iterator it{ code.begin(), code.end(), expr }; it != std::sregex_iterator{}; ++it )
     {
         // Convert the string to an integer.
+        uint8_t    byte;
         const auto str{ ( *it ).str( 1 ) };
-        uint8_t byte;
         const auto [ _, ec ]{ std::from_chars( str.data(), str.data() + str.length(), byte, 16 ) };
         if( ec == std::errc::invalid_argument )
         {
@@ -113,16 +107,7 @@ HttpResponsePtr decode( const HttpRequestPtr& req ) noexcept
         return resp_err( cs_strerror( ec ), "InvalidAsmCode", k400BadRequest, false );
     }
 
-    // Extract values from the decode result.
-    const auto [ res_count, res_bytes, res_detail ]{ *decode_res };
-
-    // Set up the final JSON result.
-    Json::Value res;
-    res[ "result" ][ "byte_count"   ] = res_count;
-    res[ "result" ][ "bytes"        ] = res_bytes;
-    res[ "result" ][ "bytes_detail" ] = res_detail;
-
-    return resp( std::move( res ) );
+    return resp( std::move( *decode_res ) );
 }
 
 } // namespace api
